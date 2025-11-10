@@ -1,30 +1,43 @@
+pub(crate) mod exceptions;
+
 #[allow(unused_imports)]
 use std::io::{self, Write};
 
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
-enum CommandError<'a> {
-    #[error("{0}: command not found")]
-    CommandNotFound(&'a str),
+use crate::exceptions::{application::ApplicationError, commands::CommandError};
+
+fn run(command: &str) -> Result<(), ApplicationError> {
+    return Err(ApplicationError::CommandError(
+        CommandError::CommandNotFound(command.to_owned()),
+    ));
 }
 
-enum Command {}
+struct Repl;
 
-fn run(command: &str) -> Result<(), CommandError> {
-    return Err(CommandError::CommandNotFound(command));
+impl Repl {
+    fn prompt(&self) -> Result<(), io::Error> {
+        print!("$ ");
+
+        io::stdout().flush()
+    }
+
+    fn spawn(&self) {
+        loop {
+            self.prompt().unwrap();
+
+            let mut buffer = String::new();
+            io::stdin().read_line(&mut buffer).unwrap();
+
+            match run(&buffer.trim()) {
+                Err(err) => print!("{}\n", err.to_string()),
+                Ok(_) => todo!(),
+            };
+            io::stdout().flush().unwrap();
+        }
+    }
 }
 
 fn main() {
-    print!("$ ");
-
-    io::stdout().flush().unwrap();
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).unwrap();
-
-    match run(&buffer.trim()) {
-        Err(err) => print!("{}", err.to_string()),
-        Ok(_) => todo!(),
-    };
-    io::stdout().flush().unwrap();
+    Repl.spawn();
 }
 
 #[cfg(test)]
@@ -35,6 +48,9 @@ mod tests {
     fn command_not_found_error() {
         let result = run("xyz").unwrap_err();
 
-        assert_eq!(result, CommandError::CommandNotFound("xyz"))
+        assert_eq!(
+            result,
+            ApplicationError::CommandError(CommandError::CommandNotFound("xyz".to_owned()))
+        )
     }
 }
