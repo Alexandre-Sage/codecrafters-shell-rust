@@ -10,6 +10,7 @@ enum CommandError<'a> {
 enum Command {}
 
 fn run(command: &str) -> Result<(), CommandError> {
+    dbg!(&command);
     return Err(CommandError::CommandNotFound(command));
 }
 
@@ -20,7 +21,7 @@ fn main() {
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer).unwrap();
 
-    match run(&buffer) {
+    match run(&buffer.trim()) {
         Err(err) => print!("{}", err.to_string()),
         Ok(_) => todo!(),
     };
