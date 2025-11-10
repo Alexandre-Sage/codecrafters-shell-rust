@@ -10,7 +10,6 @@ enum CommandError<'a> {
 enum Command {}
 
 fn run(command: &str) -> Result<(), CommandError> {
-    dbg!(&command);
     return Err(CommandError::CommandNotFound(command));
 }
 
