@@ -8,6 +8,7 @@ pub mod registry;
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub(crate) enum CommandToken {
     Exit,
+    Echo,
 }
 
 impl FromStr for CommandToken {
@@ -15,6 +16,7 @@ impl FromStr for CommandToken {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "exit" => Ok(Self::Exit),
+            "echo" => Ok(Self::Echo),
             _ => Err(CommandError::CommandNotFound(s.to_owned())),
         }
     }

@@ -29,7 +29,7 @@ mod tests {
 
     struct FakeCommand;
     impl Command for FakeCommand {
-        fn execute(&self, _args: &[&str]) -> Result<command::CommandResult, CommandError> {
+        fn execute(&self, _args: &str) -> Result<command::CommandResult, CommandError> {
             todo!()
         }
     }
