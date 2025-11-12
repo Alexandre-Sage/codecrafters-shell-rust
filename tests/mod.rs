@@ -5,7 +5,7 @@ use std::{
 
 fn test_case(command: &str, should_exit: bool) -> std::process::Output {
     let mut child_proc = Command::new("cargo")
-        .args(&["run", "--quiet"])
+        .args(["run", "--quiet"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

@@ -53,12 +53,12 @@ impl Repl {
 
             let command = self
                 .builtins
-                .try_get(&command)
+                .try_get(command)
                 .and_then(|command| command.execute(args));
 
             match command {
                 Err(err) => {
-                    eprintln!("{}", err);
+                    eprintln!("{err}");
                 }
                 Ok(res) => match res {
                     CommandResult::Exit(code) => {
