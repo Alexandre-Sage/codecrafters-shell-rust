@@ -10,10 +10,10 @@ use std::sync::Arc;
 use crate::{
     commands::{
         builtins::{echo::Echo, exit::Exit, r#type::Type},
-        registry::{self, CommandRegistry},
+        registry::CommandRegistry,
         CommandToken,
     },
-    exceptions::{application::ApplicationError, commands::CommandError},
+    exceptions::commands::CommandError,
     port::command::CommandResult,
 };
 

@@ -1,9 +1,9 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     commands::CommandToken,
     exceptions::commands::CommandError,
-    port::command::{self, Command},
+    port::command::Command,
 };
 
 #[derive(Default)]
