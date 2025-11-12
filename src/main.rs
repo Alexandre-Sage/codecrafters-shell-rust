@@ -75,7 +75,7 @@ impl Repl {
                 },
             };
 
-            io::stdout().write(b"\n").unwrap();
+            // io::stdout().write(b"\n").unwrap();
             io::stdout().flush().unwrap();
         }
     }
