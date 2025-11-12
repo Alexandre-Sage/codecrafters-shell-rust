@@ -1,56 +1,86 @@
+pub(crate) mod commands;
 pub(crate) mod exceptions;
+pub(crate) mod executable;
+pub(crate) mod port;
 
 #[allow(unused_imports)]
 use std::io::{self, Write};
+use std::sync::Arc;
 
-use crate::exceptions::{application::ApplicationError, commands::CommandError};
+use crate::{
+    commands::{
+        builtins::exit::ExitCommand,
+        registry::{self, CommandRegistry},
+        CommandToken,
+    },
+    exceptions::{application::ApplicationError, commands::CommandError},
+    port::command::CommandResult,
+};
 
-fn run(command: &str) -> Result<(), ApplicationError> {
-    return Err(ApplicationError::CommandError(
-        CommandError::CommandNotFound(command.to_owned()),
-    ));
+struct Repl {
+    builtins: CommandRegistry,
 }
 
-struct Repl;
-
 impl Repl {
+    fn new() -> Self {
+        let mut registry = CommandRegistry::default();
+        registry.register(CommandToken::Exit, Arc::new(ExitCommand));
+
+        Self { builtins: registry }
+    }
+
     fn prompt(&self) -> Result<(), io::Error> {
         print!("$ ");
 
         io::stdout().flush()
     }
 
-    fn spawn(&self) {
+    fn parse_arg(args: &str) -> (&str, Vec<&str>) {
+        let parts = args.split_whitespace().collect::<Vec<&str>>();
+        let command = parts[0].trim();
+
+        if parts.len() > 1 {
+            return (
+                command,
+                parts[1..parts.len()].iter().map(|arg| arg.trim()).collect(),
+            );
+        }
+
+        (command, vec![])
+    }
+
+    fn spawn(&self) -> Result<(), CommandError> {
         loop {
             self.prompt().unwrap();
 
             let mut buffer = String::new();
+
             io::stdin().read_line(&mut buffer).unwrap();
 
-            match run(&buffer.trim()) {
-                Err(err) => print!("{}\n", err.to_string()),
-                Ok(_) => todo!(),
+            let (command, args) = Self::parse_arg(&buffer);
+
+            let command = self
+                .builtins
+                .try_get(&command)
+                .and_then(|command| command.execute(&args));
+
+            match command {
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
+                Ok(res) => match res {
+                    CommandResult::Exit(code) => {
+                        std::process::exit(code);
+                    }
+                },
             };
+
+            io::stdout().write(b"\n").unwrap();
             io::stdout().flush().unwrap();
         }
     }
 }
 
 fn main() {
-    Repl.spawn();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn command_not_found_error() {
-        let result = run("xyz").unwrap_err();
-
-        assert_eq!(
-            result,
-            ApplicationError::CommandError(CommandError::CommandNotFound("xyz".to_owned()))
-        )
-    }
+    Repl::new().spawn().unwrap();
 }
