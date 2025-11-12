@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use crate::{
     commands::{
-        builtins::{echo::Echo, exit::Exit},
+        builtins::{echo::Echo, exit::Exit, r#type::Type},
         registry::{self, CommandRegistry},
         CommandToken,
     },
@@ -26,6 +26,7 @@ impl Repl {
         let mut registry = CommandRegistry::default();
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
+        registry.register(CommandToken::Type, Arc::new(Type));
 
         Self { builtins: registry }
     }

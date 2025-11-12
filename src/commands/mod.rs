@@ -9,6 +9,7 @@ pub mod registry;
 pub(crate) enum CommandToken {
     Exit,
     Echo,
+    Type,
 }
 
 impl FromStr for CommandToken {
@@ -17,6 +18,7 @@ impl FromStr for CommandToken {
         match s {
             "exit" => Ok(Self::Exit),
             "echo" => Ok(Self::Echo),
+            "type" => Ok(Self::Type),
             _ => Err(CommandError::CommandNotFound(s.to_owned())),
         }
     }
