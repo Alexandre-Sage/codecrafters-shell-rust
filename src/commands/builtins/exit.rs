@@ -12,13 +12,13 @@ impl Command for ExitCommand {
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
         if args.len() > 1 {
-            return Err(CommandError::TooMuchArgs("0 or 1".to_string(), args.len()));
+            return Err(CommandError::TooManyArguments("at most 1".to_string(), args.len()));
         }
 
-        let arg = !if args.is_empty() {
+        let arg = if !args.is_empty() {
             args[0]
                 .parse()
-                .map_err(|_| CommandError::ParsingError("number".to_string()))?
+                .map_err(|_| CommandError::ParsingError("integer".to_string()))?
         } else {
             0
         };
