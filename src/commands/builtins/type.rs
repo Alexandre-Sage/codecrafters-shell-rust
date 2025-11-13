@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 use crate::{
     commands::CommandToken,
@@ -42,15 +42,12 @@ impl Command for Type {
             ));
         }
 
-        let external_command = self.path_dirs.find_executable(args);
-
-        if !external_command.is_empty() {
-            // return Err(TypeCommandError::ExtrenalNotFound(args.to_string()).into());
-            let first_for_now = external_command[0].to_str().unwrap_or_default();
-            return Ok(CommandResult::Message(format!("{args} is {first_for_now}")));
+        match self.path_dirs.find_executable(args) {
+            Some(exe_path) => Ok(CommandResult::Message(
+                format!("{args} is {}", exe_path.display())
+            )),
+            None => Err(TypeCommandError::NotFound(args.to_string()).into()),
         }
-
-        Err(TypeCommandError::NotFound(args.to_string()).into())
     }
 }
 
@@ -99,6 +96,8 @@ mod tests {
         )
     }
 
+    // Error handling tests
+
     #[test]
     fn type_unknown_command() {
         let paths = create_empty_path();
@@ -141,6 +140,8 @@ mod tests {
             CommandError::TooManyArguments("1".to_string(), 3)
         )
     }
+
+    // PATH searching tests
 
     #[test]
     fn type_finds_ls_in_system_path() {
