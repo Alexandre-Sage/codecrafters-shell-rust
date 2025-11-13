@@ -25,11 +25,13 @@ impl CommandRegistry {
 
 #[cfg(test)]
 mod tests {
+    use crate::port::command::CommandResult;
+
     use super::*;
 
     struct FakeCommand;
     impl Command for FakeCommand {
-        fn execute(&self, _args: &str) -> Result<command::CommandResult, CommandError> {
+        fn execute(&self, _args: &str) -> Result<CommandResult, CommandError> {
             todo!()
         }
     }

@@ -1,3 +1,5 @@
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-#[error("{0}: not found")]
-pub(crate) struct TypeCommandNotFound(pub String);
+pub enum TypeCommandError {
+    #[error("{0}: not found")]
+    NotFound(String),
+}

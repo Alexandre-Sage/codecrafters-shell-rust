@@ -132,3 +132,21 @@ fn type_too_many_arguments() {
     assert!(stderr.contains("Too many arguments"));
     assert_eq!(output.status.code(), Some(0));
 }
+
+#[test]
+fn type_external_command_success() {
+    let output = test_case("type grep", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    assert!(stdout.contains("grep is /usr/bin/grep"));
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn type_external_command_not_found() {
+    let output = test_case("type nonexistentcommand123", true);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(stderr.contains("nonexistentcommand123: not found"));
+    assert_eq!(output.status.code(), Some(0));
+}

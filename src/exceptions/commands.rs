@@ -7,7 +7,7 @@ pub(crate) enum CommandError {
     #[error("Invalid arg type expected: {0}")]
     ParsingError(String),
     #[error(transparent)]
-    TypeCommandNotFound(#[from] super::type_command_error::TypeCommandNotFound),
+    TypeCommandError(#[from] super::type_command_error::TypeCommandError),
     #[error("No args received expected at least: {0}")]
     EmptyArgs(usize),
 }
