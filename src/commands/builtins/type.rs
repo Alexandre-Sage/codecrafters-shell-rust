@@ -36,13 +36,13 @@ impl Command for Type {
             return Err(TooManyArguments("1".to_string(), args_parts.len()));
         }
 
-        if let Ok(_) = CommandToken::from_str(args) {
+        if CommandToken::from_str(args).is_ok() {
             return Ok(CommandResult::Message(
                 args.to_owned() + " is a shell builtin",
             ));
         }
 
-        let external_command = self.path_dirs.find_executable(&args);
+        let external_command = self.path_dirs.find_executable(args);
 
         if !external_command.is_empty() {
             // return Err(TypeCommandError::ExtrenalNotFound(args.to_string()).into());
