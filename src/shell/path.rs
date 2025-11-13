@@ -19,11 +19,11 @@ impl Path {
     pub fn find_executable(&self, exe_name: &str) -> Vec<PathBuf> {
         self.path_dirs
             .iter()
-            .map(|path_dir| path_dir.join(exe_name))
             .filter(|path_dir| {
                 let exe_path = path_dir.join(exe_name);
                 exe_path.exists() && exe_path.is_file()
             })
+            .map(|path_dir| path_dir.join(exe_name))
             .collect()
     }
 }
