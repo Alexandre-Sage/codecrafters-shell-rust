@@ -7,7 +7,8 @@ pub struct Path {
 impl Path {
     pub fn from_env() -> Self {
         let paths = std::env::var("PATH").unwrap_or("".to_owned());
-        let paths: Vec<PathBuf> = std::env::split_paths(&paths).collect();
+        let mut paths: Vec<PathBuf> = std::env::split_paths(&paths).collect();
+        paths.sort();
         Self { path_dirs: paths }
     }
 
@@ -18,11 +19,11 @@ impl Path {
     pub fn find_executable(&self, exe_name: &str) -> Vec<PathBuf> {
         self.path_dirs
             .iter()
+            .map(|path_dir| path_dir.join(exe_name))
             .filter(|path_dir| {
                 let exe_path = path_dir.join(exe_name);
                 exe_path.exists() && exe_path.is_file()
             })
-            .map(|path_dir| path_dir.join(exe_name))
             .collect()
     }
 }
