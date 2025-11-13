@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 pub struct Path {
     path_dirs: Vec<PathBuf>,

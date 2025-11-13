@@ -1,4 +1,4 @@
-use std::{fmt::format, path::PathBuf, str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     commands::CommandToken,

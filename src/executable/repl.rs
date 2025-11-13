@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
-use std::{convert::Infallible, path::PathBuf, str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Result;
 
