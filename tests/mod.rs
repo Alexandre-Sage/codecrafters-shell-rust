@@ -189,7 +189,7 @@ fn pwd_outputs_absolute_path() {
     // pwd should output an absolute path (might have "$ " prefix from prompt)
     let has_path = stdout.lines()
         .any(|l| l.contains("/home") || l.contains("/usr") || l.contains("/tmp"));
-    assert!(has_path, "pwd should output absolute path, got: {}", stdout);
+    assert!(has_path, "pwd should output absolute path, got: {stdout}");
     assert_eq!(output.status.code(), Some(0));
 }
 
@@ -451,7 +451,7 @@ fn cd_to_root_then_pwd() {
     // After cd /, pwd should show /
     let has_root = stdout.lines()
         .any(|l| l.trim() == "/" || l.contains("$ /"));
-    assert!(has_root, "pwd should show / after cd /, got: {}", stdout);
+    assert!(has_root, "pwd should show / after cd /, got: {stdout}");
     assert_eq!(output.status.code(), Some(0));
 }
 
@@ -580,8 +580,7 @@ fn cd_tilde_expansion_to_home() {
     // After cd ~, pwd should show home directory
     assert!(
         stdout.contains("/home/") || stdout.contains("/Users/"),
-        "cd ~ should go to home directory, got: {}",
-        stdout
+        "cd ~ should go to home directory, got: {stdout}"
     );
     assert_eq!(output.status.code(), Some(0));
 }

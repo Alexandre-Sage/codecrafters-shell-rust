@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-
 use crate::{
     exceptions::commands::CommandError,
     port::command::{Command, CommandResult},
@@ -16,21 +15,20 @@ impl Cd {
     {
         std::env::set_current_dir(dir).map_err(|err| CommandError::Unknown(err.to_string()))?;
 
-        return Ok(CommandResult::Empty);
+        Ok(CommandResult::Empty)
     }
 
     fn should_go_to_homedir(&self, args: &str) -> bool {
         if args.is_empty() {
             return true;
         }
-        return args == "~";
+        args == "~" || args == "~/"
     }
 
     fn format_path(&self, args: &str) -> Result<PathBuf, CommandError> {
         let home_dir = std::env::home_dir().unwrap();
 
-        if args.starts_with("~/") {
-            let remaining = &args[2..];
+        if let Some(remaining) = args.strip_prefix("~/") {
             return Ok(home_dir.join(remaining));
         }
 
@@ -121,11 +119,11 @@ mod tests {
     fn change_to_home_with_tilde() {
         // Save current directory to restore later
         let original_dir = std::env::current_dir().unwrap();
-        
+
         // Execute cd ~
         let result = Cd.execute("~");
         assert!(result.is_ok(), "cd ~ should succeed");
-        
+
         // Verify we're actually in home directory
         let current_dir = std::env::current_dir().unwrap();
         let home_dir = std::env::home_dir().unwrap();
@@ -133,7 +131,7 @@ mod tests {
             current_dir, home_dir,
             "Current directory should be home directory after cd ~"
         );
-        
+
         // Restore original directory for other tests
         std::env::set_current_dir(original_dir).unwrap();
     }
