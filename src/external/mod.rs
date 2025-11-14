@@ -22,7 +22,7 @@ impl ShellComponent for ExternalCommand {
             let output = std::process::Command::new(command)
                 .args(args.split_whitespace())
                 .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
+                // .stderr(Stdio::inherit())
                 .status()
                 .map_err(|err| CommandError::ExternalError(err.to_string()))?;
 
