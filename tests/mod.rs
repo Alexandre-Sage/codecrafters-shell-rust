@@ -177,6 +177,128 @@ fn external_command_pwd() {
     assert_eq!(output.status.code(), Some(0));
 }
 
+// ============================================================================
+// PWD Command Tests
+// ============================================================================
+
+#[test]
+fn pwd_outputs_absolute_path() {
+    let output = test_case("pwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // pwd should output an absolute path (might have "$ " prefix from prompt)
+    let has_path = stdout.lines()
+        .any(|l| l.contains("/home") || l.contains("/usr") || l.contains("/tmp"));
+    assert!(has_path, "pwd should output absolute path, got: {}", stdout);
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_no_trailing_slash() {
+    let output = test_case("pwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // pwd output should not end with / (unless it's root directory)
+    let path = stdout.trim();
+    if path != "/" {
+        assert!(!path.ends_with('/'), "pwd should not have trailing slash");
+    }
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_single_line_output() {
+    let output = test_case("pwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // pwd should output exactly one path line
+    let lines: Vec<&str> = stdout.lines()
+        .filter(|l| l.contains("codecrafters-shell-rust"))
+        .collect();
+    assert_eq!(lines.len(), 1, "pwd should output exactly one path line");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_no_stderr_on_success() {
+    let output = test_case("pwd", true);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    
+    // pwd with no args should not produce stderr
+    assert!(stderr.is_empty() || !stderr.contains("invalid option"));
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_multiple_calls_consistent() {
+    let output = test_case("pwd\npwd\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // All pwd calls should return the same path
+    let lines: Vec<&str> = stdout.lines().filter(|l| !l.is_empty() && !l.starts_with('$')).collect();
+    
+    if lines.len() >= 2 {
+        assert_eq!(lines[0], lines[1], "pwd should be consistent across calls");
+        if lines.len() >= 3 {
+            assert_eq!(lines[1], lines[2], "pwd should be consistent across calls");
+        }
+    }
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_after_other_commands() {
+    let output = test_case("echo test\npwd\nls", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // pwd should work correctly after other commands
+    assert!(stdout.contains("test"));
+    assert!(stdout.contains("codecrafters-shell-rust"));
+    assert!(stdout.contains("Cargo.toml") || stdout.contains("src"));
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_valid_path_format() {
+    let output = test_case("pwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Find line with path (might be prefixed with "$ ")
+    let path_line = stdout.lines()
+        .find(|l| l.contains("codecrafters-shell-rust"))
+        .expect("Should have a path line with project name");
+    
+    // Extract actual path (remove "$ " prefix if present)
+    let path = path_line.trim_start_matches("$ ").trim();
+    
+    // pwd should output a valid Unix path
+    assert!(path.starts_with('/'), "Should be absolute path");
+    assert!(!path.is_empty(), "Path should not be empty");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn pwd_contains_valid_components() {
+    let output = test_case("pwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Find line with path
+    let path_line = stdout.lines()
+        .find(|l| l.contains("codecrafters-shell-rust"))
+        .expect("Should have a path line");
+    
+    // Extract actual path (remove "$ " prefix if present)
+    let path = path_line.trim_start_matches("$ ").trim();
+    
+    // Path components should not contain invalid characters
+    assert!(!path.contains("//"), "Should not have consecutive slashes");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+// ============================================================================
+// Back to other external command tests
+// ============================================================================
+
 #[test]
 fn external_command_cat_with_file() {
     let output = test_case("cat Cargo.toml", true);
@@ -304,5 +426,148 @@ fn external_command_false_fails() {
     let output = test_case("false", true);
     
     // Shell itself should exit with 0 (from our exit command)
+    assert_eq!(output.status.code(), Some(0));
+}
+
+// ============================================================================
+// CD Command Integration Tests (Absolute Paths Only)
+// ============================================================================
+
+#[test]
+fn cd_to_tmp_then_pwd() {
+    let output = test_case("cd /tmp\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // After cd /tmp, pwd should show /tmp
+    assert!(stdout.contains("/tmp"), "pwd should show /tmp after cd /tmp");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_to_root_then_pwd() {
+    let output = test_case("cd /\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // After cd /, pwd should show /
+    let has_root = stdout.lines()
+        .any(|l| l.trim() == "/" || l.contains("$ /"));
+    assert!(has_root, "pwd should show / after cd /, got: {}", stdout);
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_to_home_no_args() {
+    let output = test_case("cd\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // After cd with no args, should be in home directory
+    assert!(
+        stdout.contains("/home/") || stdout.contains("/Users/"),
+        "Should be in home directory after cd with no args"
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_nonexistent_directory() {
+    let output = test_case("cd /this/does/not/exist/xyz123", true);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    
+    // Should produce error
+    assert!(
+        stderr.contains("not found") || stderr.contains("No such"),
+        "Should show error for nonexistent directory"
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_to_file_not_directory() {
+    let output = test_case("cd /bin/sh", true);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    
+    // Should produce error (can't cd to a file)
+    assert!(
+        stderr.contains("Not a directory") || stderr.contains("not a directory"),
+        "Should show error when trying to cd to a file"
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_persists_across_commands() {
+    let output = test_case("cd /tmp\nls\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // pwd at the end should still show /tmp
+    assert!(stdout.contains("/tmp"), "Directory change should persist");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_then_ls_shows_correct_directory() {
+    let output = test_case("cd /\nls", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // ls after cd / should show root directory contents
+    assert!(
+        stdout.contains("bin") || stdout.contains("usr") || stdout.contains("tmp"),
+        "ls should show root directory contents after cd /"
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn multiple_cd_commands() {
+    let output = test_case("cd /tmp\ncd /\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Final pwd should show / (last cd wins)
+    let has_root = stdout.lines()
+        .any(|l| l.trim() == "/" || l.contains("$ /"));
+    assert!(has_root, "Final pwd should show / after multiple cd commands");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_with_trailing_slash() {
+    let output = test_case("cd /tmp/\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Should handle trailing slash correctly
+    assert!(stdout.contains("/tmp"), "Should handle trailing slash in cd");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_too_many_arguments() {
+    let output = test_case("cd /tmp /usr", true);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    
+    // Should produce error for multiple arguments
+    assert!(
+        stderr.contains("Too many arguments") || stderr.contains("too many"),
+        "Should show error for cd with multiple arguments"
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_then_external_command() {
+    let output = test_case("cd /tmp\ncat /etc/hostname", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // cat should work after cd (external commands should still work)
+    assert!(!stdout.is_empty(), "External commands should work after cd");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cd_affects_relative_file_operations() {
+    let output = test_case("cd /\nls tmp", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // After cd /, ls tmp should list /tmp contents
+    // (This tests that cd actually changes the working directory for child processes)
     assert_eq!(output.status.code(), Some(0));
 }

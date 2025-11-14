@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(crate) enum CommandError {
     #[error("{0}: command not found")]
@@ -14,4 +16,8 @@ pub(crate) enum CommandError {
     ExternalError(String),
     #[error("{0}")]
     Unknown(String),
+    #[error("{0}: No such file or directory")]
+    DirectoryNotFound(PathBuf),
+    #[error("{0}: is not a directory")]
+    NotADirectory(PathBuf),
 }

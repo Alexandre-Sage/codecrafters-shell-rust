@@ -5,6 +5,7 @@ pub(crate) enum CommandResult {
     Exit(i32),
     Message(String),
     Stdio(String, String),
+    Empty,
 }
 
 pub(crate) trait Command {

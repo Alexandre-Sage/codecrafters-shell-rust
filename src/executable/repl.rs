@@ -6,7 +6,7 @@ use anyhow::Result;
 
 use crate::{
     commands::{
-        builtins::{echo::Echo, exit::Exit, pwd::Pwd, r#type::Type},
+        builtins::{cd::Cd, echo::Echo, exit::Exit, pwd::Pwd, r#type::Type},
         registry::CommandRegistry,
         CommandToken,
     },
@@ -28,6 +28,7 @@ impl Repl {
         registry.register(CommandToken::Echo, Arc::new(Echo));
         registry.register(CommandToken::Type, Arc::new(Type::new(paths.clone())));
         registry.register(CommandToken::Pwd, Arc::new(Pwd));
+        registry.register(CommandToken::Cd, Arc::new(Cd));
 
         Self {
             builtins: registry,
@@ -65,6 +66,9 @@ impl Repl {
                     CommandResult::Stdio(stdout, stderr) => {
                         print!("{stdout}");
                         eprint!("{stderr}");
+                    }
+                    CommandResult::Empty => {
+                        // Command executed successfully with no output (like cd)
                     }
                 },
             };

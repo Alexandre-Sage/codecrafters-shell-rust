@@ -11,6 +11,7 @@ pub(crate) enum CommandToken {
     Echo,
     Type,
     Pwd,
+    Cd,
 }
 
 impl FromStr for CommandToken {
@@ -21,6 +22,7 @@ impl FromStr for CommandToken {
             "echo" => Ok(Self::Echo),
             "type" => Ok(Self::Type),
             "pwd" => Ok(Self::Pwd),
+            "cd" => Ok(Self::Cd),
             _ => Err(CommandError::CommandNotFound(command.to_owned())),
         }
     }
