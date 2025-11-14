@@ -4,6 +4,7 @@ use crate::exceptions::commands::CommandError;
 pub(crate) enum CommandResult {
     Exit(i32),
     Message(String),
+    Stdio(String, String),
 }
 
 pub(crate) trait Command {

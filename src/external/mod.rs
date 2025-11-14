@@ -27,8 +27,10 @@ impl ShellComponent for ExternalCommand {
                 .output()
                 .map_err(|err| CommandError::ExternalError(err.to_string()))?;
 
-            let result = String::from_utf8_lossy(&output.stdout);
-            return Ok(CommandResult::Message(result.to_string()));
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+
+            return Ok(CommandResult::Stdio(stdout.to_string(), stderr.to_string()));
         }
 
         Err(CommandError::CommandNotFound(command.to_owned()).into())

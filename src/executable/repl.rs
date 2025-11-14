@@ -61,6 +61,10 @@ impl Repl {
                     CommandResult::Message(message) => {
                         println!("{message}")
                     }
+                    CommandResult::Stdio(stdout, stderr) => {
+                        print!("{stdout}");
+                        eprint!("{stderr}");
+                    }
                 },
             };
 
