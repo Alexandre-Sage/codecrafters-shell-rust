@@ -25,7 +25,7 @@ impl Path {
             return permissions.mode() & 0o111 != 0;
         }
 
-        return false;
+        false
     }
     pub fn find_executable(&self, exe_name: &str) -> Option<PathBuf> {
         self.path_dirs.iter().find_map(|path_dir| {

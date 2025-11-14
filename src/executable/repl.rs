@@ -49,7 +49,7 @@ impl Repl {
 
             io::stdin().read_line(&mut buffer).unwrap();
 
-            let command = self.builtins.execute(&buffer.trim());
+            let command = self.builtins.execute(buffer.trim());
 
             match command {
                 Err(err) => {

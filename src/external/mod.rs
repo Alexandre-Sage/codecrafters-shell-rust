@@ -18,7 +18,7 @@ impl ExternalCommand {
 
 impl ShellComponent for ExternalCommand {
     fn handler(&self, command: &str, args: &str) -> Result<CommandResult, ApplicationError> {
-        if let Some(_) = self.path_dirs.find_executable(command) {
+        if self.path_dirs.find_executable(command).is_some() {
             let output = std::process::Command::new(command)
                 .args(args.split_whitespace())
                 // .stdout(Stdio::inherit())
