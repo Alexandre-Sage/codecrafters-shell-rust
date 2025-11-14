@@ -21,12 +21,15 @@ impl ShellComponent for ExternalCommand {
         if let Some(exe_path) = self.path_dirs.find_executable(command) {
             let output = std::process::Command::new(exe_path)
                 .args(args.split_whitespace())
-                .stdout(Stdio::inherit())
+                .output()
+                // .stdout(Stdio::inherit())
                 // .stderr(Stdio::inherit())
-                .status()
+                // .status()
                 .map_err(|err| CommandError::ExternalError(err.to_string()))?;
 
-            return Ok(CommandResult::Message(output.to_string()));
+            return Ok(CommandResult::Message(
+                String::from_utf8_lossy(&output.stdout).to_string(),
+            ));
         }
 
         Err(CommandError::CommandNotFound(command.to_owned()).into())
