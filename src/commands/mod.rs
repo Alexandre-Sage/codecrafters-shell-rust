@@ -20,7 +20,7 @@ impl FromStr for CommandToken {
             "exit" => Ok(Self::Exit),
             "echo" => Ok(Self::Echo),
             "type" => Ok(Self::Type),
-            "pwd" => Ok(Self::Pwd)
+            "pwd" => Ok(Self::Pwd),
             _ => Err(CommandError::CommandNotFound(command.to_owned())),
         }
     }
