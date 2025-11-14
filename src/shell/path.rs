@@ -19,12 +19,12 @@ impl Path {
         if !exe_path.is_file() {
             return false;
         }
+
         if let Ok(metadata) = exe_path.metadata() {
             let permissions = metadata.permissions();
-            if permissions.mode() & 0o111 != 0 {
-                return true;
-            }
+            return permissions.mode() & 0o111 != 0;
         }
+
         return false;
     }
     pub fn find_executable(&self, exe_name: &str) -> Option<PathBuf> {
@@ -34,14 +34,6 @@ impl Path {
             if self.is_executable(&exe_path) {
                 return Some(exe_path);
             }
-            // if exe_path.is_file() {
-            //     if let Ok(metadata) = exe_path.metadata() {
-            //         let permissions = metadata.permissions();
-            //         if permissions.mode() & 0o111 != 0 {
-            //             return Some(exe_path);
-            //         }
-            //     }
-            // }
 
             None
         })

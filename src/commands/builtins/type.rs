@@ -43,9 +43,10 @@ impl Command for Type {
         }
 
         match self.path_dirs.find_executable(args) {
-            Some(exe_path) => Ok(CommandResult::Message(
-                format!("{args} is {}", exe_path.display())
-            )),
+            Some(exe_path) => Ok(CommandResult::Message(format!(
+                "{args} is {}",
+                exe_path.display()
+            ))),
             None => Err(TypeCommandError::NotFound(args.to_string()).into()),
         }
     }

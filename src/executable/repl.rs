@@ -11,7 +11,7 @@ use crate::{
         CommandToken,
     },
     exceptions::commands::CommandError,
-    port::command::CommandResult,
+    port::{command::CommandResult, shell_component::ShellComponent},
     shell::path::Path,
 };
 
@@ -23,7 +23,7 @@ pub struct Repl {
 impl Repl {
     pub fn new() -> Self {
         let paths = Arc::new(Path::from_env());
-        let mut registry = CommandRegistry::default();
+        let mut registry = CommandRegistry::new(paths.clone());
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
         registry.register(CommandToken::Type, Arc::new(Type::new(paths.clone())));
@@ -40,10 +40,6 @@ impl Repl {
         io::stdout().flush()
     }
 
-    fn parse_arg(args: &str) -> (&str, &str) {
-        args.split_once(" ").unwrap_or((args, ""))
-    }
-
     pub fn spawn(&self) -> Result<(), CommandError> {
         loop {
             self.prompt().unwrap();
@@ -52,12 +48,7 @@ impl Repl {
 
             io::stdin().read_line(&mut buffer).unwrap();
 
-            let (command, args) = Self::parse_arg(buffer.trim());
-
-            let command = self
-                .builtins
-                .try_get(command)
-                .and_then(|command| command.execute(args));
+            let command = self.builtins.execute(&buffer.trim());
 
             match command {
                 Err(err) => {

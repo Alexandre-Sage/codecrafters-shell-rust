@@ -2,27 +2,52 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     commands::CommandToken,
-    exceptions::commands::CommandError,
-    port::command::Command,
+    exceptions::{application::ApplicationError, commands::CommandError},
+    external::ExternalCommand,
+    port::{
+        command::{self, Command, CommandResult},
+        shell_component::ShellComponent,
+    },
+    shell::path::Path,
 };
 
-#[derive(Default)]
-pub(crate) struct CommandRegistry(HashMap<CommandToken, Arc<dyn Command>>);
+pub(crate) struct CommandRegistry {
+    registry: HashMap<CommandToken, Arc<dyn Command>>,
+    path_dirs: Arc<Path>,
+}
 
 impl CommandRegistry {
+    pub(crate) fn new(path_dirs: Arc<Path>) -> Self {
+        Self {
+            registry: HashMap::default(),
+            path_dirs,
+        }
+    }
+
     pub fn try_get(&self, command: &str) -> Result<&Arc<dyn Command>, CommandError> {
         let token = command.parse()?;
 
-        self.0
+        self.registry
             .get(&token)
             .ok_or(CommandError::CommandNotFound(command.to_owned()))
     }
 
     pub fn register(&mut self, token: CommandToken, command: Arc<dyn Command>) {
-        self.0.insert(token, command);
+        self.registry.insert(token, command);
     }
 }
 
+impl ShellComponent for CommandRegistry {
+    fn handler(&self, command: &str, args: &str) -> Result<CommandResult, ApplicationError> {
+        let command = self.try_get(command)?;
+        let result = command.execute(args)?;
+
+        Ok(result)
+    }
+    fn next(&self) -> Option<Arc<dyn ShellComponent>> {
+        Some(Arc::new(ExternalCommand::new(Arc::clone(&self.path_dirs))))
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::port::command::CommandResult;
@@ -38,7 +63,8 @@ mod tests {
 
     #[test]
     fn get_command() {
-        let mut registry = CommandRegistry::default();
+        let paths = Arc::new(Path::new(vec![]));
+        let mut registry = CommandRegistry::new(paths);
         registry.register(CommandToken::Exit, Arc::new(FakeCommand));
         let result = registry.try_get("exit");
         assert!(result.is_ok())
@@ -46,7 +72,8 @@ mod tests {
 
     #[test]
     fn command_not_found() {
-        let registry = CommandRegistry::default();
+        let paths = Arc::new(Path::new(vec![]));
+        let registry = CommandRegistry::new(paths);
         let result = registry.try_get("exit");
         assert!(result.is_err());
         assert_eq!(

@@ -10,4 +10,6 @@ pub(crate) enum CommandError {
     TypeCommandError(#[from] super::type_command_error::TypeCommandError),
     #[error("No args received expected at least: {0}")]
     EmptyArgs(usize),
+    #[error("{0}")]
+    ExternalError(String),
 }
