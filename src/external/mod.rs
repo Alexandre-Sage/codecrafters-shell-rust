@@ -1,4 +1,4 @@
-use std::{borrow::Cow, process::Stdio, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     exceptions::{application::ApplicationError, commands::CommandError},

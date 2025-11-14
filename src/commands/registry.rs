@@ -5,7 +5,7 @@ use crate::{
     exceptions::{application::ApplicationError, commands::CommandError},
     external::ExternalCommand,
     port::{
-        command::{self, Command, CommandResult},
+        command::{Command, CommandResult},
         shell_component::ShellComponent,
     },
     shell::path::Path,
