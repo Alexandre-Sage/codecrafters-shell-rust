@@ -6,7 +6,7 @@ use anyhow::Result;
 
 use crate::{
     commands::{
-        builtins::{echo::Echo, exit::Exit, r#type::Type},
+        builtins::{echo::Echo, exit::Exit, pwd::Pwd, r#type::Type},
         registry::CommandRegistry,
         CommandToken,
     },
@@ -27,6 +27,7 @@ impl Repl {
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
         registry.register(CommandToken::Type, Arc::new(Type::new(paths.clone())));
+        registry.register(CommandToken::Pwd, Arc::new(Pwd));
 
         Self {
             builtins: registry,

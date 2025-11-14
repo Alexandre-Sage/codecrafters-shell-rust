@@ -12,4 +12,6 @@ pub(crate) enum CommandError {
     EmptyArgs(usize),
     #[error("{0}")]
     ExternalError(String),
+    #[error("{0}")]
+    Unknown(String),
 }

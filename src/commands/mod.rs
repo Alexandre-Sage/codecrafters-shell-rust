@@ -10,16 +10,18 @@ pub(crate) enum CommandToken {
     Exit,
     Echo,
     Type,
+    Pwd,
 }
 
 impl FromStr for CommandToken {
     type Err = CommandError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+    fn from_str(command: &str) -> Result<Self, Self::Err> {
+        match command {
             "exit" => Ok(Self::Exit),
             "echo" => Ok(Self::Echo),
             "type" => Ok(Self::Type),
-            _ => Err(CommandError::CommandNotFound(s.to_owned())),
+            "pwd" => Ok(Self::Pwd)
+            _ => Err(CommandError::CommandNotFound(command.to_owned())),
         }
     }
 }
