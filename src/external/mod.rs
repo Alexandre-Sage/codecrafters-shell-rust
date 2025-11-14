@@ -18,18 +18,15 @@ impl ExternalCommand {
 
 impl ShellComponent for ExternalCommand {
     fn handler(&self, command: &str, args: &str) -> Result<CommandResult, ApplicationError> {
-        if let Some(exe_path) = self.path_dirs.find_executable(command) {
-            let output = std::process::Command::new(exe_path)
+        if let Some(_) = self.path_dirs.find_executable(command) {
+            let output = std::process::Command::new(command)
                 .args(args.split_whitespace())
-                .output()
-                // .stdout(Stdio::inherit())
-                // .stderr(Stdio::inherit())
-                // .status()
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .status()
                 .map_err(|err| CommandError::ExternalError(err.to_string()))?;
 
-            return Ok(CommandResult::Message(
-                String::from_utf8_lossy(&output.stdout).to_string(),
-            ));
+            return Ok(CommandResult::Message(output.to_string()));
         }
 
         Err(CommandError::CommandNotFound(command.to_owned()).into())
