@@ -1,6 +1,5 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
-use mockall::predicate::path;
 
 use crate::{
     exceptions::commands::CommandError,
