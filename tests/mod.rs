@@ -571,3 +571,17 @@ fn cd_affects_relative_file_operations() {
     // (This tests that cd actually changes the working directory for child processes)
     assert_eq!(output.status.code(), Some(0));
 }
+
+#[test]
+fn cd_tilde_expansion_to_home() {
+    let output = test_case("cd ~\npwd", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // After cd ~, pwd should show home directory
+    assert!(
+        stdout.contains("/home/") || stdout.contains("/Users/"),
+        "cd ~ should go to home directory, got: {}",
+        stdout
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
