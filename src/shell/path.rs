@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{os::unix::fs::PermissionsExt, path::PathBuf};
 
 pub struct Path {
     path_dirs: Vec<PathBuf>,
@@ -15,10 +15,35 @@ impl Path {
         Self { path_dirs }
     }
 
+    pub fn is_executable(&self, exe_path: &PathBuf) -> bool {
+        if !exe_path.is_file() {
+            return false;
+        }
+        if let Ok(metadata) = exe_path.metadata() {
+            let permissions = metadata.permissions();
+            if permissions.mode() & 0o111 != 0 {
+                return true;
+            }
+        }
+        return false;
+    }
     pub fn find_executable(&self, exe_name: &str) -> Option<PathBuf> {
         self.path_dirs.iter().find_map(|path_dir| {
             let exe_path = path_dir.join(exe_name);
-            exe_path.is_file().then_some(exe_path)
+
+            if self.is_executable(&exe_path) {
+                return Some(exe_path);
+            }
+            // if exe_path.is_file() {
+            //     if let Ok(metadata) = exe_path.metadata() {
+            //         let permissions = metadata.permissions();
+            //         if permissions.mode() & 0o111 != 0 {
+            //             return Some(exe_path);
+            //         }
+            //     }
+            // }
+
+            None
         })
     }
 }
@@ -31,12 +56,9 @@ mod tests {
 
     #[test]
     fn new_creates_path_with_directories() {
-        let dirs = vec![
-            PathBuf::from("/usr/bin"),
-            PathBuf::from("/bin"),
-        ];
+        let dirs = vec![PathBuf::from("/usr/bin"), PathBuf::from("/bin")];
         let path = Path::new(dirs.clone());
-        
+
         assert_eq!(path.path_dirs.len(), 2);
     }
 
@@ -59,23 +81,26 @@ mod tests {
     fn find_executable_finds_ls_in_system_path() {
         let path = Path::from_env();
         let result = path.find_executable("ls");
-        
+
         // ls should exist in at least one PATH directory on Unix systems
         assert!(result.is_some(), "ls should be found in PATH");
-        
+
         let exe_path = result.unwrap();
         assert!(exe_path.exists(), "Executable should exist");
         assert!(exe_path.is_file(), "Should be a file");
-        assert!(exe_path.to_string_lossy().contains("ls"), "Path should contain 'ls'");
+        assert!(
+            exe_path.to_string_lossy().contains("ls"),
+            "Path should contain 'ls'"
+        );
     }
 
     #[test]
     fn find_executable_finds_cat_in_system_path() {
         let path = Path::from_env();
         let result = path.find_executable("cat");
-        
+
         assert!(result.is_some(), "cat should be found in PATH");
-        
+
         let exe_path = result.unwrap();
         assert!(exe_path.exists());
         assert!(exe_path.to_string_lossy().contains("cat"));
@@ -85,7 +110,7 @@ mod tests {
     fn find_executable_returns_none_for_nonexistent() {
         let path = Path::from_env();
         let result = path.find_executable("thiscommanddoesnotexist12345");
-        
+
         assert!(result.is_none(), "Should not find nonexistent command");
     }
 
@@ -93,18 +118,15 @@ mod tests {
     fn find_executable_with_empty_path_returns_none() {
         let path = Path::new(vec![]);
         let result = path.find_executable("ls");
-        
+
         assert!(result.is_none(), "Should not find anything with empty PATH");
     }
 
     #[test]
     fn find_executable_with_specific_directories() {
-        let path = Path::new(vec![
-            PathBuf::from("/usr/bin"),
-            PathBuf::from("/bin"),
-        ]);
+        let path = Path::new(vec![PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
         let result = path.find_executable("ls");
-        
+
         // ls should be in either /usr/bin or /bin on most Unix systems
         assert!(result.is_some(), "Should find ls in /usr/bin or /bin");
     }
@@ -112,13 +134,10 @@ mod tests {
     #[test]
     fn find_executable_returns_first_match() {
         // If executable exists in multiple directories, returns first
-        let path = Path::new(vec![
-            PathBuf::from("/bin"),
-            PathBuf::from("/usr/bin"),
-        ]);
-        
+        let path = Path::new(vec![PathBuf::from("/bin"), PathBuf::from("/usr/bin")]);
+
         let result = path.find_executable("sh");
-        
+
         if let Some(exe_path) = result {
             // Should be from /bin (first in PATH)
             let path_str = exe_path.to_string_lossy();
@@ -131,12 +150,12 @@ mod tests {
     fn find_executable_ignores_directories() {
         // Create a path that includes a directory that exists
         let path = Path::new(vec![
-            PathBuf::from("/usr"),  // This is a directory, not a file
+            PathBuf::from("/usr"), // This is a directory, not a file
         ]);
-        
+
         // Looking for "bin" (which is a directory in /usr)
         let result = path.find_executable("bin");
-        
+
         // Should not find it because it's a directory, not a file
         assert!(result.is_none(), "Should not match directories");
     }
@@ -147,7 +166,7 @@ mod tests {
             PathBuf::from("/this/does/not/exist"),
             PathBuf::from("/usr/bin"),
         ]);
-        
+
         // Should still find ls in /usr/bin despite nonexistent first directory
         let result = path.find_executable("ls");
         assert!(result.is_some(), "Should skip nonexistent dirs and find ls");
@@ -159,7 +178,7 @@ mod tests {
     fn find_executable_with_empty_name() {
         let path = Path::from_env();
         let result = path.find_executable("");
-        
+
         // Empty name should not match anything
         assert!(result.is_none(), "Empty name should not match");
     }
@@ -167,13 +186,16 @@ mod tests {
     #[test]
     fn find_executable_case_sensitive() {
         let path = Path::from_env();
-        
+
         // Unix filenames are case-sensitive
         let lower_result = path.find_executable("ls");
         let upper_result = path.find_executable("LS");
-        
+
         // "ls" should exist, "LS" probably doesn't
         assert!(lower_result.is_some(), "ls should exist");
-        assert!(upper_result.is_none(), "LS should not exist (case-sensitive)");
+        assert!(
+            upper_result.is_none(),
+            "LS should not exist (case-sensitive)"
+        );
     }
 }
