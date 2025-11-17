@@ -81,11 +81,10 @@ impl InputParser {
                     tmp.push(char);
                 }
 
-                if idx == args.len() - 1 {
-                    if !tmp.is_empty() {
+                if idx == args.len() - 1
+                    && !tmp.is_empty() {
                         parsed_args.push(tmp.iter().collect());
                     }
-                }
             }
 
             return Ok(ParsedCommand::new(command.to_owned(), parsed_args));

@@ -597,8 +597,7 @@ fn echo_with_single_quotes_preserves_spaces() {
     // Spaces within quotes should be preserved
     assert!(
         stdout.contains("hello    world"),
-        "Should preserve multiple spaces within quotes, got: {}",
-        stdout
+        "Should preserve multiple spaces within quotes, got: {stdout}"
     );
     assert_eq!(output.status.code(), Some(0));
 }
@@ -637,7 +636,7 @@ fn cat_with_single_quoted_filename_with_spaces() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     
     // cat should work with quoted filenames
-    assert!(!stdout.is_empty() || output.stderr.len() > 0);
+    assert!(!stdout.is_empty() || !output.stderr.is_empty());
     assert_eq!(output.status.code(), Some(0));
 }
 
@@ -649,8 +648,7 @@ fn echo_adjacent_single_quotes_concatenate() {
     // Adjacent quoted strings should concatenate
     assert!(
         stdout.contains("helloworld"),
-        "Adjacent quotes should concatenate, got: {}",
-        stdout
+        "Adjacent quotes should concatenate, got: {stdout}"
     );
     assert_eq!(output.status.code(), Some(0));
 }
@@ -663,8 +661,7 @@ fn echo_empty_quotes_ignored() {
     // Empty quotes should be ignored
     assert!(
         stdout.contains("helloworld"),
-        "Empty quotes should be ignored, got: {}",
-        stdout
+        "Empty quotes should be ignored, got: {stdout}"
     );
     assert_eq!(output.status.code(), Some(0));
 }
