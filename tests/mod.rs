@@ -608,14 +608,25 @@ fn echo_single_quotes_vs_no_quotes_spaces() {
     let output = test_case("echo hello    world\necho 'hello    world'", true);
     let stdout = String::from_utf8_lossy(&output.stdout);
     
-    // First echo collapses spaces, second preserves them
-    let lines: Vec<&str> = stdout.lines()
-        .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('$'))
+    // Extract output after prompts
+    // Lines look like: "$ hello world"
+    let outputs: Vec<String> = stdout.lines()
+        .filter_map(|l| {
+            let trimmed = l.trim();
+            if trimmed.starts_with("$ ") {
+                Some(trimmed[2..].to_string())
+            } else {
+                None
+            }
+        })
+        .filter(|s| !s.is_empty() && s != "exit")
         .collect();
     
     // Without quotes: "hello world" (spaces collapsed)
     // With quotes: "hello    world" (spaces preserved)
-    assert!(lines.len() >= 2, "Should have output from both echo commands");
+    assert!(outputs.len() >= 2, "Should have output from both echo commands, got {} outputs", outputs.len());
+    assert_eq!(outputs[0], "hello world", "First echo should collapse spaces");
+    assert_eq!(outputs[1], "hello    world", "Second echo should preserve spaces");
     assert_eq!(output.status.code(), Some(0));
 }
 

@@ -51,7 +51,14 @@ impl Repl {
 
             io::stdin().read_line(&mut buffer).unwrap();
 
-            let parsed_command = self.input_parser.parse(&buffer)?;
+            let parsed_command = match self.input_parser.parse(buffer.trim()) {
+                Ok(cmd) => cmd,
+                Err(err) => {
+                    eprintln!("{err}");
+                    continue;
+                }
+            };
+
             let command = self.builtins.execute(parsed_command);
 
             match command {

@@ -37,14 +37,14 @@ mod tests {
     #[test]
     fn exit_0() {
         let command = Exit;
-        let result = command.execute("0");
+        let result = command.execute(&["0".to_string()]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), CommandResult::Exit(0))
     }
     #[test]
     fn exit_1() {
         let command = Exit;
-        let result = command.execute("1");
+        let result = command.execute(&["1".to_string()]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), CommandResult::Exit(1))
     }

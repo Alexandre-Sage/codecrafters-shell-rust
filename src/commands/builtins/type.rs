@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn type_echo_builtin() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("echo");
+        let result = Type::new(paths).execute(&["echo".to_string()]);
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn type_exit_builtin() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("exit");
+        let result = Type::new(paths).execute(&["exit".to_string()]);
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn type_itself_is_builtin() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("type");
+        let result = Type::new(paths).execute(&["type".to_string()]);
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn type_unknown_command() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("nonexistentcommand");
+        let result = Type::new(paths).execute(&["nonexistentcommand".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn type_empty_args() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("");
+        let result = Type::new(paths).execute(&[]);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), CommandError::EmptyArgs(1))
     }
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn type_too_many_args() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("echo exit");
+        let result = Type::new(paths).execute(&["echo".to_string(), "exit".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -134,7 +134,8 @@ mod tests {
     #[test]
     fn type_multiple_args() {
         let paths = create_empty_path();
-        let result = Type::new(paths).execute("echo exit ls");
+        let result =
+            Type::new(paths).execute(&["echo".to_string(), "exit".to_string(), "ls".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -148,7 +149,7 @@ mod tests {
     fn type_finds_ls_in_system_path() {
         // Use actual system PATH
         let paths = Arc::new(Path::from_env());
-        let result = Type::new(paths).execute("ls");
+        let result = Type::new(paths).execute(&["ls".to_string()]);
 
         // ls should be found in PATH (exists on most Unix systems)
         assert!(result.is_ok());
@@ -164,7 +165,7 @@ mod tests {
     #[test]
     fn type_finds_cat_in_system_path() {
         let paths = Arc::new(Path::from_env());
-        let result = Type::new(paths).execute("cat");
+        let result = Type::new(paths).execute(&["cat".to_string()]);
 
         assert!(result.is_ok());
         let msg = result.unwrap();
@@ -179,7 +180,7 @@ mod tests {
     #[test]
     fn type_nonexistent_external_command() {
         let paths = Arc::new(Path::from_env());
-        let result = Type::new(paths).execute("thisdoesnotexist12345");
+        let result = Type::new(paths).execute(&["thisdoesnotexist12345".to_string()]);
 
         assert!(result.is_err());
         assert_eq!(
@@ -197,7 +198,7 @@ mod tests {
             PathBuf::from("/bin"),
         ]));
 
-        let result = Type::new(paths).execute("ls");
+        let result = Type::new(paths).execute(&["ls".to_string()]);
 
         assert!(result.is_ok());
     }
@@ -205,7 +206,7 @@ mod tests {
     #[test]
     fn type_builtin_takes_precedence_over_external() {
         let paths = Arc::new(Path::from_env());
-        let result = Type::new(paths).execute("echo");
+        let result = Type::new(paths).execute(&["echo".to_string()]);
 
         assert!(result.is_ok());
         assert_eq!(
@@ -218,10 +219,10 @@ mod tests {
     fn type_empty_path_only_finds_builtins() {
         let paths = create_empty_path();
 
-        let result = Type::new(Arc::clone(&paths)).execute("echo");
+        let result = Type::new(Arc::clone(&paths)).execute(&["echo".to_string()]);
         assert!(result.is_ok());
 
-        let result = Type::new(paths).execute("ls");
+        let result = Type::new(paths).execute(&["ls".to_string()]);
         assert!(result.is_err());
     }
 }

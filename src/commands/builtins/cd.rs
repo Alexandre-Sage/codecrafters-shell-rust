@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn change_to_home_if_empty() {
         let current_dir = std::env::current_dir().unwrap();
-        let result = Cd.execute("");
+        let result = Cd.execute(&[]);
         assert!(result.is_ok());
         assert_ne!(current_dir, std::env::current_dir().unwrap())
     }
@@ -88,14 +88,14 @@ mod tests {
     #[test]
     fn change_to_param_dir() {
         let current_dir = std::env::current_dir().unwrap();
-        let result = Cd.execute("/");
+        let result = Cd.execute(&["/".to_string()]);
         assert!(result.is_ok());
         assert_ne!(current_dir, std::env::current_dir().unwrap())
     }
 
     #[test]
     fn error_not_found() {
-        let result = Cd.execute("/x/y/z");
+        let result = Cd.execute(&["/x/y/z".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn errorr_not_a_dir() {
-        let result = Cd.execute("/bin/cat");
+        let result = Cd.execute(&["/bin/cat".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -119,7 +119,7 @@ mod tests {
         let original_dir = std::env::current_dir().unwrap();
 
         // Execute cd ~
-        let result = Cd.execute("~");
+        let result = Cd.execute(&["~".to_string()]);
         assert!(result.is_ok(), "cd ~ should succeed");
 
         // Verify we're actually in home directory
