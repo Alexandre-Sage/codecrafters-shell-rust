@@ -11,13 +11,14 @@ use crate::{
         CommandToken,
     },
     exceptions::commands::CommandError,
+    parser::InputParser,
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::path::Path,
 };
 
 pub struct Repl {
     builtins: CommandRegistry,
-    paths: Arc<Path>,
+    input_parser: InputParser,
 }
 
 impl Repl {
@@ -32,7 +33,7 @@ impl Repl {
 
         Self {
             builtins: registry,
-            paths,
+            input_parser: InputParser::new(),
         }
     }
 
@@ -50,7 +51,8 @@ impl Repl {
 
             io::stdin().read_line(&mut buffer).unwrap();
 
-            let command = self.builtins.execute(buffer.trim());
+            let parsed_command = self.input_parser.parse(&buffer)?;
+            let command = self.builtins.execute(parsed_command);
 
             match command {
                 Err(err) => {

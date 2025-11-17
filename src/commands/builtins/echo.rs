@@ -5,10 +5,10 @@ pub struct Echo;
 impl Command for Echo {
     fn execute(
         &self,
-        args: &str,
+        args: &[String],
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
-        Ok(CommandResult::Message(args.to_string()))
+        Ok(CommandResult::Message(args.join("")))
     }
 }
 #[cfg(test)]

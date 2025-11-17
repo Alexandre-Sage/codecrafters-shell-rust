@@ -8,11 +8,9 @@ pub struct Exit;
 impl Command for Exit {
     fn execute(
         &self,
-        args: &str,
+        args: &[String],
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
-        let args = args.split_whitespace().collect::<Vec<&str>>();
-
         if args.len() > 1 {
             return Err(CommandError::TooManyArguments(
                 "at most 1".to_string(),

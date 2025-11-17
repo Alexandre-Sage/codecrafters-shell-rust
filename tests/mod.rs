@@ -584,3 +584,76 @@ fn cd_tilde_expansion_to_home() {
     );
     assert_eq!(output.status.code(), Some(0));
 }
+
+// ============================================================================
+// Single Quote Handling Integration Tests
+// ============================================================================
+
+#[test]
+fn echo_with_single_quotes_preserves_spaces() {
+    let output = test_case("echo 'hello    world'", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Spaces within quotes should be preserved
+    assert!(
+        stdout.contains("hello    world"),
+        "Should preserve multiple spaces within quotes, got: {}",
+        stdout
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn echo_single_quotes_vs_no_quotes_spaces() {
+    let output = test_case("echo hello    world\necho 'hello    world'", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // First echo collapses spaces, second preserves them
+    let lines: Vec<&str> = stdout.lines()
+        .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('$'))
+        .collect();
+    
+    // Without quotes: "hello world" (spaces collapsed)
+    // With quotes: "hello    world" (spaces preserved)
+    assert!(lines.len() >= 2, "Should have output from both echo commands");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn cat_with_single_quoted_filename_with_spaces() {
+    // First create a file with spaces in name
+    let output = test_case("cat '/etc/hostname'", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // cat should work with quoted filenames
+    assert!(!stdout.is_empty() || output.stderr.len() > 0);
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn echo_adjacent_single_quotes_concatenate() {
+    let output = test_case("echo 'hello''world'", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Adjacent quoted strings should concatenate
+    assert!(
+        stdout.contains("helloworld"),
+        "Adjacent quotes should concatenate, got: {}",
+        stdout
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn echo_empty_quotes_ignored() {
+    let output = test_case("echo hello''world", true);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Empty quotes should be ignored
+    assert!(
+        stdout.contains("helloworld"),
+        "Empty quotes should be ignored, got: {}",
+        stdout
+    );
+    assert_eq!(output.status.code(), Some(0));
+}

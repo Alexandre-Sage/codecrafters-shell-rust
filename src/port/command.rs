@@ -9,5 +9,5 @@ pub(crate) enum CommandResult {
 }
 
 pub(crate) trait Command {
-    fn execute(&self, args: &str) -> Result<CommandResult, CommandError>;
+    fn execute(&self, args: &[String]) -> Result<CommandResult, CommandError>;
 }

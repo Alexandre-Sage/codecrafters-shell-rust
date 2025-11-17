@@ -18,11 +18,12 @@ impl Cd {
         Ok(CommandResult::Empty)
     }
 
-    fn should_go_to_homedir(&self, args: &str) -> bool {
+    fn should_go_to_homedir(&self, args: &[String]) -> bool {
         if args.is_empty() {
             return true;
         }
-        args == "~" || args == "~/"
+        let arg = &args[0];
+        arg == "~" || arg == "~/"
     }
 
     fn format_path(&self, args: &str) -> Result<PathBuf, CommandError> {
@@ -44,7 +45,7 @@ impl Cd {
 impl Command for Cd {
     fn execute(
         &self,
-        args: &str,
+        args: &[String],
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
         let home_dir = std::env::home_dir().unwrap();
@@ -53,16 +54,13 @@ impl Command for Cd {
             return self.change_dir(home_dir);
         }
 
-        let args_parts: Vec<_> = args.split_whitespace().collect();
+        // let args_parts: Vec<_> = args.split_whitespace().collect();
 
-        if args_parts.len() > 1 {
-            return Err(CommandError::TooManyArguments(
-                "1".to_string(),
-                args_parts.len(),
-            ));
+        if args.len() > 1 {
+            return Err(CommandError::TooManyArguments("1".to_string(), args.len()));
         }
 
-        let path = self.format_path(args)?;
+        let path = self.format_path(&args[0])?;
 
         if !path.exists() {
             return Err(CommandError::DirectoryNotFound(path));

@@ -38,7 +38,7 @@ impl CommandRegistry {
 }
 
 impl ShellComponent for CommandRegistry {
-    fn handler(&self, command: &str, args: &str) -> Result<CommandResult, ApplicationError> {
+    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, ApplicationError> {
         let command = self.try_get(command)?;
         let result = command.execute(args)?;
 
@@ -56,7 +56,7 @@ mod tests {
 
     struct FakeCommand;
     impl Command for FakeCommand {
-        fn execute(&self, _args: &str) -> Result<CommandResult, CommandError> {
+        fn execute(&self, _args: &[String]) -> Result<CommandResult, CommandError> {
             todo!()
         }
     }

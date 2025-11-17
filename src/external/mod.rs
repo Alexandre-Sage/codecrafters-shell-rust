@@ -17,10 +17,10 @@ impl ExternalCommand {
 }
 
 impl ShellComponent for ExternalCommand {
-    fn handler(&self, command: &str, args: &str) -> Result<CommandResult, ApplicationError> {
+    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, ApplicationError> {
         if self.path_dirs.find_executable(command).is_some() {
             let output = std::process::Command::new(command)
-                .args(args.split_whitespace())
+                .args(args)
                 // .stdout(Stdio::inherit())
                 // .stderr(Stdio::inherit())
                 // .status()

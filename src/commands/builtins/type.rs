@@ -23,31 +23,30 @@ impl Type {
 impl Command for Type {
     fn execute(
         &self,
-        args: &str,
+        args: &[String],
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
         if args.is_empty() {
             return Err(CommandError::EmptyArgs(1));
         }
 
-        let args_parts = args.split_whitespace().collect::<Vec<&str>>();
-
-        if args_parts.len() > 1 {
-            return Err(TooManyArguments("1".to_string(), args_parts.len()));
+        if args.len() > 1 {
+            return Err(TooManyArguments("1".to_string(), args.len()));
         }
+        let arg = &args[0];
 
-        if CommandToken::from_str(args).is_ok() {
+        if CommandToken::from_str(arg).is_ok() {
             return Ok(CommandResult::Message(
-                args.to_owned() + " is a shell builtin",
+                arg.to_owned() + " is a shell builtin",
             ));
         }
 
-        match self.path_dirs.find_executable(args) {
+        match self.path_dirs.find_executable(arg) {
             Some(exe_path) => Ok(CommandResult::Message(format!(
-                "{args} is {}",
+                "{arg} is {}",
                 exe_path.display()
             ))),
-            None => Err(TypeCommandError::NotFound(args.to_string()).into()),
+            None => Err(TypeCommandError::NotFound(arg.to_string()).into()),
         }
     }
 }
@@ -55,6 +54,7 @@ impl Command for Type {
 #[cfg(test)]
 mod tests {
     use crate::{exceptions::commands::CommandError, port::command::CommandResult};
+    use std::path::PathBuf;
 
     use super::*;
 

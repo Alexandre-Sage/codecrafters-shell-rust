@@ -20,4 +20,6 @@ pub(crate) enum CommandError {
     DirectoryNotFound(PathBuf),
     #[error("{0}: is not a directory")]
     NotADirectory(PathBuf),
+    #[error("Missing closing single quote")]
+    MissingClosingSingleQuote,
 }
