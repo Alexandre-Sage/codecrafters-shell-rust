@@ -177,7 +177,7 @@ mod tests {
     }
 
     // ========================================================================
-    // Edge Case Tests
+    // Edge Case Tests - Single Quotes
     // ========================================================================
 
     #[test]
@@ -221,5 +221,166 @@ mod tests {
         let parsed = result.unwrap();
         assert_eq!(parsed.command(), "hello");
         assert_eq!(parsed.args().len(), 0);
+    }
+
+    // ========================================================================
+    // Happy Path Tests - Double Quotes
+    // ========================================================================
+
+    #[test]
+    fn parse_simple_double_quoted_string() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello world"]);
+    }
+
+    #[test]
+    fn parse_double_quotes_preserve_multiple_spaces() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello    world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello    world"]);
+    }
+
+    #[test]
+    fn parse_multiple_double_quoted_arguments() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat \"/tmp/file1\" \"/tmp/file2\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["/tmp/file1", "/tmp/file2"]);
+    }
+
+    #[test]
+    fn parse_adjacent_double_quoted_strings_concatenate() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello\"\"world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["helloworld"]);
+    }
+
+    #[test]
+    fn parse_empty_double_quotes_ignored() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\"\"world");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["helloworld"]);
+    }
+
+    #[test]
+    fn parse_double_quote_with_spaces_in_filename() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat \"/tmp/file name with spaces\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["/tmp/file name with spaces"]);
+    }
+
+    #[test]
+    fn parse_mixed_double_quoted_and_unquoted() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello \"world test\" foo");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello", "world test", "foo"]);
+    }
+
+    #[test]
+    fn parse_unclosed_double_quote_returns_error() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello world");
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err();
+        assert_eq!(err_msg, CommandError::MissingClosingDoubleQuote);
+    }
+
+    #[test]
+    fn parse_double_quotes_command_name() {
+        let parser = InputParser::new();
+        let result = parser.parse("\"echo\" hello");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello"]);
+    }
+
+    #[test]
+    fn parse_double_quotes_only_command() {
+        let parser = InputParser::new();
+        let result = parser.parse("\"hello\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "hello");
+        assert_eq!(parsed.args().len(), 0);
+    }
+
+    // ========================================================================
+    // Edge Case Tests - Mixed Quotes
+    // ========================================================================
+
+    #[test]
+    fn parse_mixed_single_and_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo 'single' \"double\" plain");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["single", "double", "plain"]);
+    }
+
+    #[test]
+    fn parse_double_quotes_with_single_quote_inside() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello'world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello'world"]);
+    }
+
+    #[test]
+    fn parse_single_quotes_with_double_quote_inside() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo 'hello\"world'");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello\"world"]);
+    }
+
+    #[test]
+    fn parse_alternating_single_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"a\"'b'\"c\"'d'");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["abcd"]);
     }
 }

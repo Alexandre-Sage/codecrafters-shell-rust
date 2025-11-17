@@ -22,4 +22,6 @@ pub(crate) enum CommandError {
     NotADirectory(PathBuf),
     #[error("Missing closing single quote")]
     MissingClosingSingleQuote,
+    #[error("Missing closing double quote")]
+    MissingClosingDoubleQuote,
 }
