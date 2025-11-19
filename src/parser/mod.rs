@@ -164,7 +164,7 @@ impl InputParser {
         if args.contains(SINGLE_QUOTE) || args.contains(DOUBLE_QUOTE) {
             let quote_positions = self.quote_positions(args)?;
             let parsed_args = self.parse_quote(&quote_positions, args);
-            return Ok(ParsedCommand::new(&command, parsed_args));
+            return Ok(ParsedCommand::new(command, parsed_args));
         }
 
         Ok(ParsedCommand::from_raw((command, args)))

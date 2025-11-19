@@ -8,8 +8,7 @@ fn echo_with_double_quotes_preserves_spaces() {
     
     assert!(
         stdout.contains("hello    world"),
-        "Should preserve multiple spaces within double quotes, got: {}",
-        stdout
+        "Should preserve multiple spaces within double quotes, got: {stdout}"
     );
     assert_eq!(output.status.code(), Some(0));
 }
@@ -42,7 +41,7 @@ fn cat_with_double_quoted_filename_with_spaces() {
     let output = test_case("cat \"/etc/hostname\"", true);
     let stdout = String::from_utf8_lossy(&output.stdout);
     
-    assert!(!stdout.is_empty() || output.stderr.len() > 0);
+    assert!(!stdout.is_empty() || !output.stderr.is_empty());
     assert_eq!(output.status.code(), Some(0));
 }
 
