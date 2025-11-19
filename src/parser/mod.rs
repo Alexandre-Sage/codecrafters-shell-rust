@@ -1,4 +1,4 @@
-use std::{char, str::FromStr, usize};
+use std::{char, usize};
 
 use crate::exceptions::commands::CommandError;
 
