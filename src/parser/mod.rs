@@ -5,6 +5,38 @@ use crate::exceptions::commands::CommandError;
 const SINGLE_QUOTE: char = '\'';
 const DOUBLE_QUOTE: char = '"';
 
+#[derive(Debug, Clone, Copy)]
+pub enum QuotePosition {
+    SingleQuote(usize, usize),
+    DoubleQuote(usize, usize),
+}
+
+impl QuotePosition {
+    fn start(&self) -> &usize {
+        match self {
+            Self::SingleQuote(start, _) | Self::DoubleQuote(start, _) => start,
+        }
+    }
+
+    fn end(&self) -> &usize {
+        match self {
+            Self::DoubleQuote(_, end) | Self::SingleQuote(_, end) => end,
+        }
+    }
+
+    fn set_start(&mut self, pos: usize) {
+        match self {
+            Self::SingleQuote(start, _) | Self::DoubleQuote(start, _) => *start = pos,
+        }
+    }
+
+    fn set_end(&mut self, pos: usize) {
+        match self {
+            Self::SingleQuote(_, end) | Self::DoubleQuote(_, end) => *end = pos,
+        }
+    }
+}
+
 pub struct InputParser;
 
 #[derive(Debug)]
@@ -45,39 +77,55 @@ impl InputParser {
         Self
     }
 
-    fn quote_positions(&self, args: &str) -> Result<Vec<(usize, usize)>, CommandError> {
+    fn quote_positions(&self, args: &str) -> Result<Vec<QuotePosition>, CommandError> {
         let quote_pos = args
             .chars()
             .enumerate()
             .filter(|(_, char)| *char == SINGLE_QUOTE || *char == DOUBLE_QUOTE)
-            .map(|(idx, _)| idx)
+            // .map(|(idx, _)| idx)
             .collect::<Vec<_>>();
 
         if quote_pos.len() % 2 != 0 {
             return Err(CommandError::MissingClosingQuote);
         }
 
-        let quote_pos_merged: Vec<(usize, usize)> =
+        let quote_pos_merged: Vec<QuotePosition> =
             quote_pos
                 .chunks(2)
                 .enumerate()
                 .fold(vec![], |mut positions, (idx, quote_pos)| {
-                    if !positions.is_empty() && positions[idx - 1].1 == quote_pos[0] - 1 {
-                        positions[idx - 1] = (positions[idx - 1].0, quote_pos[1]);
-                        return positions;
+                    let opening_pos = quote_pos[0].0;
+                    let opening_quote = quote_pos[0].1;
+                    let closing_pos = quote_pos[1].0;
+                    let closing_quote = quote_pos[1].1;
+
+                    if let Some(previous_pos) = positions.last_mut() {
+                        if *previous_pos.end() == opening_pos - 1 {
+                            previous_pos.set_start(*previous_pos.start());
+                            previous_pos.set_end(closing_pos);
+                            return positions;
+                        }
                     }
 
-                    positions.push((quote_pos[0], quote_pos[1]));
+                    let position = match opening_quote {
+                        SINGLE_QUOTE => QuotePosition::SingleQuote(opening_pos, closing_pos),
+                        DOUBLE_QUOTE => QuotePosition::DoubleQuote(opening_pos, closing_pos),
+                        _ => panic!("Not possible"),
+                    };
+                    positions.push(position);
                     positions
                 });
 
         Ok(quote_pos_merged)
     }
 
-    pub fn parse_quote(&self, quote_positions: &[(usize, usize)], args: &str) -> Vec<String> {
+    pub fn parse_quote(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
         let quote_positions_filtered: Vec<_> = quote_positions
             .iter()
-            .filter(|position| position.0 + 1 != position.1)
+            .filter(|position| {
+                dbg!(&position);
+                position.start() + 1 != *position.end()
+            })
             .collect();
 
         let mut parsed_args: Vec<String> = vec![];
@@ -85,8 +133,8 @@ impl InputParser {
         for (idx, char) in args.chars().enumerate() {
             let is_between_quote = quote_positions_filtered
                 .iter()
-                .any(|pos| idx > pos.0 && idx < pos.1);
-            let is_closing_quote = quote_positions_filtered.iter().any(|pos| pos.1 == idx);
+                .any(|pos| idx > *pos.start() && idx < *pos.end());
+            let is_closing_quote = quote_positions_filtered.iter().any(|pos| *pos.end() == idx);
 
             if (char == ' ' && !is_between_quote) || is_closing_quote {
                 if !tmp.is_empty() {
