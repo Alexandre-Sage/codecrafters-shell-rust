@@ -45,55 +45,39 @@ impl InputParser {
         Self
     }
 
-    fn quote_type_positions(
-        &self,
-        quote_type: char,
-        args: &str,
-    ) -> Result<Vec<(usize, usize)>, CommandError> {
+    fn quote_positions(&self, args: &str) -> Result<Vec<(usize, usize)>, CommandError> {
         let quote_pos = args
             .chars()
             .enumerate()
-            .filter(|(_, char)| *char == quote_type)
+            .filter(|(_, char)| *char == SINGLE_QUOTE || *char == DOUBLE_QUOTE)
             .map(|(idx, _)| idx)
             .collect::<Vec<_>>();
 
         if quote_pos.len() % 2 != 0 {
-            return match quote_type {
-                SINGLE_QUOTE => Err(CommandError::MissingClosingSingleQuote),
-                DOUBLE_QUOTE => Err(CommandError::MissingClosingDoubleQuote),
-                _ => Err(CommandError::Unknown("".to_owned())),
-            };
+            return Err(CommandError::MissingClosingQuote);
         }
 
         let quote_pos_merged: Vec<(usize, usize)> =
             quote_pos
                 .chunks(2)
                 .enumerate()
-                .fold(vec![], |mut acc, (idx, cur)| {
-                    if !acc.is_empty() && acc[idx - 1].1 == cur[0] - 1 {
-                        acc[idx - 1] = (acc[idx - 1].0, cur[1]);
-                        return acc;
+                .fold(vec![], |mut positions, (idx, quote_pos)| {
+                    if !positions.is_empty() && positions[idx - 1].1 == quote_pos[0] - 1 {
+                        positions[idx - 1] = (positions[idx - 1].0, quote_pos[1]);
+                        return positions;
                     }
 
-                    acc.push((cur[0], cur[1]));
-                    acc
+                    positions.push((quote_pos[0], quote_pos[1]));
+                    positions
                 });
 
         Ok(quote_pos_merged)
     }
 
-    pub fn parse_quote_type(
-        &self,
-        quote_type: char,
-        quote_positions: &[(usize, usize)],
-        args: &str,
-    ) -> Option<Vec<String>> {
-        if quote_positions.is_empty() {
-            return None;
-        }
+    pub fn parse_quote(&self, quote_positions: &[(usize, usize)], args: &str) -> Vec<String> {
         let quote_positions_filtered: Vec<_> = quote_positions
             .iter()
-            .filter(|item| item.0 + 1 != item.1)
+            .filter(|position| position.0 + 1 != position.1)
             .collect();
 
         let mut parsed_args: Vec<String> = vec![];
@@ -112,7 +96,7 @@ impl InputParser {
                 continue;
             }
 
-            if char != quote_type {
+            if char != SINGLE_QUOTE && char != DOUBLE_QUOTE {
                 tmp.push(char);
             }
 
@@ -120,34 +104,16 @@ impl InputParser {
                 parsed_args.push(tmp.iter().collect());
             }
         }
-        Some(parsed_args)
+        parsed_args
     }
 
     pub fn parse(&self, input: &str) -> Result<ParsedCommand, CommandError> {
         let (command, args) = input.split_once(" ").unwrap_or((input, ""));
 
         if args.contains(SINGLE_QUOTE) || args.contains(DOUBLE_QUOTE) {
-            let single_quote_position = self.quote_type_positions(SINGLE_QUOTE, args)?;
-            let parsed_single_qote =
-                self.parse_quote_type(SINGLE_QUOTE, &single_quote_position, args);
-
-            let double_quote_position = self.quote_type_positions(DOUBLE_QUOTE, args)?;
-            let parsed_double_quote =
-                self.parse_quote_type(DOUBLE_QUOTE, &double_quote_position, args);
-
-            let parsed_args = match (parsed_single_qote, parsed_double_quote) {
-                (Some(parsed_single_qote), None) => ParsedCommand::new(command, parsed_single_qote),
-                (None, Some(parsed_double_quote)) => {
-                    ParsedCommand::new(command, parsed_double_quote)
-                }
-                (Some(parsed_single_qote), Some(parsed_double_quote)) => {
-                    let args = [&parsed_single_qote[..], &parsed_double_quote[..]].concat();
-                    ParsedCommand::new(command, args)
-                }
-                (None, None) => ParsedCommand::from((command, args)),
-            };
-
-            return Ok(parsed_args);
+            let quote_positions = self.quote_positions(args)?;
+            let parsed_args = self.parse_quote(&quote_positions, args);
+            return Ok(ParsedCommand::new(&command, parsed_args));
         }
 
         Ok(ParsedCommand::from((command, args)))
@@ -262,7 +228,7 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err();
-        assert_eq!(err_msg, CommandError::MissingClosingSingleQuote);
+        assert_eq!(err_msg, CommandError::MissingClosingQuote);
     }
 
     #[test]
@@ -364,7 +330,7 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err();
-        assert_eq!(err_msg, CommandError::MissingClosingDoubleQuote);
+        assert_eq!(err_msg, CommandError::MissingClosingQuote);
     }
 
     #[test]
@@ -388,22 +354,18 @@ mod tests {
         assert_eq!(parsed.command(), "hello");
         assert_eq!(parsed.args().len(), 0);
     }
-    //
-    // // ========================================================================
-    // // Edge Case Tests - Mixed Quotes
-    // // ========================================================================
-    //
-    // #[test]
-    // fn parse_mixed_single_and_double_quotes() {
-    //     let parser = InputParser::new();
-    //     let result = parser.parse("echo 'single' \"double\" plain");
-    //
-    //     assert!(result.is_ok());
-    //     let parsed = result.unwrap();
-    //     assert_eq!(parsed.command(), "echo");
-    //     assert_eq!(parsed.args(), &["single", "double", "plain"]);
-    // }
-    //
+
+    #[test]
+    fn parse_mixed_single_and_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo 'single' \"double\" plain");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["single", "double", "plain"]);
+    }
+
     // #[test]
     // fn parse_double_quotes_with_single_quote_inside() {
     //     let parser = InputParser::new();
@@ -426,14 +388,14 @@ mod tests {
     //     assert_eq!(parsed.args(), &["hello\"world"]);
     // }
     //
-    // #[test]
-    // fn parse_alternating_single_double_quotes() {
-    //     let parser = InputParser::new();
-    //     let result = parser.parse("echo \"a\"'b'\"c\"'d'");
-    //
-    //     assert!(result.is_ok());
-    //     let parsed = result.unwrap();
-    //     assert_eq!(parsed.command(), "echo");
-    //     assert_eq!(parsed.args(), &["abcd"]);
-    // }
+    #[test]
+    fn parse_alternating_single_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"a\"'b'\"c\"'d'");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["abcd"]);
+    }
 }

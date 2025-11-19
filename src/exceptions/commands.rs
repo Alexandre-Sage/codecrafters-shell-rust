@@ -21,7 +21,5 @@ pub(crate) enum CommandError {
     #[error("{0}: is not a directory")]
     NotADirectory(PathBuf),
     #[error("Missing closing single quote")]
-    MissingClosingSingleQuote,
-    #[error("Missing closing double quote")]
-    MissingClosingDoubleQuote,
+    MissingClosingQuote,
 }
