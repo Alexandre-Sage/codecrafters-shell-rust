@@ -1,4 +1,4 @@
-use std::{char, usize};
+use std::{char, str::FromStr, usize};
 
 use crate::exceptions::commands::CommandError;
 
@@ -9,6 +9,32 @@ const DOUBLE_QUOTE: char = '"';
 pub enum QuotePosition {
     SingleQuote(usize, usize),
     DoubleQuote(usize, usize),
+}
+
+impl From<(QuoteType, (usize, usize))> for QuotePosition {
+    fn from((quote_type, (start, end)): (QuoteType, (usize, usize))) -> Self {
+        match quote_type {
+            QuoteType::Single => Self::SingleQuote(start, end),
+            QuoteType::Double => Self::DoubleQuote(start, end),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum QuoteType {
+    Single,
+    Double,
+}
+
+impl TryFrom<char> for QuoteType {
+    type Error = CommandError;
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            SINGLE_QUOTE => Ok(Self::Single),
+            DOUBLE_QUOTE => Ok(Self::Double),
+            _ => Err(CommandError::Unknown("Not a quote".to_owned())),
+        }
+    }
 }
 
 impl QuotePosition {
@@ -23,18 +49,6 @@ impl QuotePosition {
             Self::DoubleQuote(_, end) | Self::SingleQuote(_, end) => end,
         }
     }
-
-    fn set_start(&mut self, pos: usize) {
-        match self {
-            Self::SingleQuote(start, _) | Self::DoubleQuote(start, _) => *start = pos,
-        }
-    }
-
-    fn set_end(&mut self, pos: usize) {
-        match self {
-            Self::SingleQuote(_, end) | Self::DoubleQuote(_, end) => *end = pos,
-        }
-    }
 }
 
 pub struct InputParser;
@@ -42,8 +56,20 @@ pub struct InputParser;
 #[derive(Debug)]
 pub struct ParsedCommand(String, Vec<String>);
 
-impl From<(&str, &str)> for ParsedCommand {
-    fn from((command, args): (&str, &str)) -> Self {
+impl ParsedCommand {
+    pub fn new(command: &str, args: Vec<String>) -> Self {
+        Self(command.to_owned(), args)
+    }
+
+    pub fn args(&self) -> &[String] {
+        &self.1
+    }
+
+    pub fn command(&self) -> &str {
+        &self.0
+    }
+
+    fn from_raw((command, args): (&str, &str)) -> Self {
         let args = args
             .split_whitespace()
             .map(|item| item.to_owned())
@@ -58,85 +84,62 @@ impl From<(&str, &str)> for ParsedCommand {
     }
 }
 
-impl ParsedCommand {
-    pub fn new(command: &str, args: Vec<String>) -> Self {
-        Self(command.to_owned(), args)
-    }
-
-    pub fn args(&self) -> &[String] {
-        &self.1
-    }
-
-    pub fn command(&self) -> &str {
-        &self.0
-    }
-}
-
 impl InputParser {
     pub fn new() -> Self {
         Self
     }
 
     fn quote_positions(&self, args: &str) -> Result<Vec<QuotePosition>, CommandError> {
-        let quote_pos = args
-            .chars()
-            .enumerate()
-            .filter(|(_, char)| *char == SINGLE_QUOTE || *char == DOUBLE_QUOTE)
-            // .map(|(idx, _)| idx)
-            .collect::<Vec<_>>();
+        let mut opening_quote: Option<(QuoteType, usize)> = None;
+        let mut quote_positions: Vec<QuotePosition> = Vec::new();
 
-        if quote_pos.len() % 2 != 0 {
+        for (idx, char) in args.chars().enumerate() {
+            if char == SINGLE_QUOTE || char == DOUBLE_QUOTE {
+                let quote_type = QuoteType::try_from(char)?;
+
+                match opening_quote {
+                    Some((quote, start)) => {
+                        if quote == quote_type {
+                            let quote_pos = QuotePosition::from((quote, (start, idx)));
+                            quote_positions.push(quote_pos);
+                            opening_quote = None;
+                        }
+                    }
+                    None => {
+                        opening_quote.replace((quote_type, idx));
+                    }
+                }
+            }
+        }
+
+        if opening_quote.is_some() {
             return Err(CommandError::MissingClosingQuote);
         }
 
-        let quote_pos_merged: Vec<QuotePosition> =
-            quote_pos
-                .chunks(2)
-                .enumerate()
-                .fold(vec![], |mut positions, (idx, quote_pos)| {
-                    let opening_pos = quote_pos[0].0;
-                    let opening_quote = quote_pos[0].1;
-                    let closing_pos = quote_pos[1].0;
-                    let closing_quote = quote_pos[1].1;
-
-                    if let Some(previous_pos) = positions.last_mut() {
-                        if *previous_pos.end() == opening_pos - 1 {
-                            previous_pos.set_start(*previous_pos.start());
-                            previous_pos.set_end(closing_pos);
-                            return positions;
-                        }
-                    }
-
-                    let position = match opening_quote {
-                        SINGLE_QUOTE => QuotePosition::SingleQuote(opening_pos, closing_pos),
-                        DOUBLE_QUOTE => QuotePosition::DoubleQuote(opening_pos, closing_pos),
-                        _ => panic!("Not possible"),
-                    };
-                    positions.push(position);
-                    positions
-                });
-
-        Ok(quote_pos_merged)
+        Ok(quote_positions)
     }
 
     pub fn parse_quote(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
         let quote_positions_filtered: Vec<_> = quote_positions
             .iter()
-            .filter(|position| {
-                dbg!(&position);
-                position.start() + 1 != *position.end()
-            })
+            .filter(|position| position.start() + 1 != *position.end())
             .collect();
 
         let mut parsed_args: Vec<String> = vec![];
         let mut tmp: Vec<char> = vec![];
         for (idx, char) in args.chars().enumerate() {
-            let is_between_quote = quote_positions_filtered
+            // Use strict inequalities (> and <) to exclude quote boundaries                                                                                                          │
+            // This means opening/closing quotes are NOT "inside" the range                                                                                                           │
+            let maybe_quote_pos = quote_positions_filtered
                 .iter()
-                .any(|pos| idx > *pos.start() && idx < *pos.end());
-            let is_closing_quote = quote_positions_filtered.iter().any(|pos| *pos.end() == idx);
+                .find(|pos| idx > *pos.start() && idx < *pos.end());
 
-            if (char == ' ' && !is_between_quote) || is_closing_quote {
+            if maybe_quote_pos.is_some() {
+                tmp.push(char);
+                continue;
+            }
+
+            if char == ' ' {
                 if !tmp.is_empty() {
                     parsed_args.push(tmp.iter().collect());
                     tmp.clear();
@@ -164,7 +167,7 @@ impl InputParser {
             return Ok(ParsedCommand::new(&command, parsed_args));
         }
 
-        Ok(ParsedCommand::from((command, args)))
+        Ok(ParsedCommand::from_raw((command, args)))
     }
 }
 
@@ -414,28 +417,28 @@ mod tests {
         assert_eq!(parsed.args(), &["single", "double", "plain"]);
     }
 
-    // #[test]
-    // fn parse_double_quotes_with_single_quote_inside() {
-    //     let parser = InputParser::new();
-    //     let result = parser.parse("echo \"hello'world\"");
-    //
-    //     assert!(result.is_ok());
-    //     let parsed = result.unwrap();
-    //     assert_eq!(parsed.command(), "echo");
-    //     assert_eq!(parsed.args(), &["hello'world"]);
-    // }
-    //
-    // #[test]
-    // fn parse_single_quotes_with_double_quote_inside() {
-    //     let parser = InputParser::new();
-    //     let result = parser.parse("echo 'hello\"world'");
-    //
-    //     assert!(result.is_ok());
-    //     let parsed = result.unwrap();
-    //     assert_eq!(parsed.command(), "echo");
-    //     assert_eq!(parsed.args(), &["hello\"world"]);
-    // }
-    //
+    #[test]
+    fn parse_double_quotes_with_single_quote_inside() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello'world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello'world"]);
+    }
+
+    #[test]
+    fn parse_single_quotes_with_double_quote_inside() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo 'hello\"world'");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello\"world"]);
+    }
+
     #[test]
     fn parse_alternating_single_double_quotes() {
         let parser = InputParser::new();
