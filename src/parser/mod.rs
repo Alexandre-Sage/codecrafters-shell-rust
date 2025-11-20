@@ -50,6 +50,10 @@ impl QuotePosition {
             Self::DoubleQuote(_, end) | Self::SingleQuote(_, end) => end,
         }
     }
+
+    fn is_doulbe_quote(&self) -> bool {
+        matches!(self, QuotePosition::DoubleQuote(_, _))
+    }
 }
 
 pub struct InputParser;
@@ -131,7 +135,8 @@ impl InputParser {
         let mut parsed_args: Vec<String> = vec![];
         let mut current_arg: Vec<char> = vec![];
         let mut escape_next = false;
-        for (idx, char) in args.chars().enumerate() {
+        let c = args.chars();
+        for (idx, char) in c.enumerate() {
             if !quote_positions_filtered.is_empty() {
                 // Use strict inequalities (> and <) to exclude quote boundaries                                                                                                          │
                 // This means opening/closing quotes are NOT "inside" the range                                                                                                           │
@@ -139,7 +144,22 @@ impl InputParser {
                     .iter()
                     .find(|pos| idx > *pos.start() && idx < *pos.end());
 
-                if maybe_quote_pos.is_some() {
+                if let Some(quote_pos) = maybe_quote_pos {
+                    if char == BACK_SLASH && quote_pos.is_doulbe_quote() {
+                        escape_next = true;
+                        continue;
+                    }
+
+                    if escape_next {
+                        if char == DOUBLE_QUOTE || char == BACK_SLASH {
+                            current_arg.push(char);
+                        } else {
+                            current_arg.push(BACK_SLASH);
+                            current_arg.push(char);
+                        }
+                        escape_next = false;
+                        continue;
+                    }
                     current_arg.push(char);
                     continue;
                 }
@@ -677,5 +697,149 @@ mod tests {
         // Trailing backslash with nothing to escape
         // This might be implementation-specific, but typically treated as literal
         assert_eq!(parsed.args(), &["hello"]);
+    }
+
+    // ========================================================================
+    // Backslash Escaping Inside Double Quotes
+    // ========================================================================
+
+    #[test]
+    fn parse_double_backslash_inside_double_quotes_produces_single() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello\\\\world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // Inside double quotes, \\ should produce single \
+        assert_eq!(parsed.args(), &["hello\\world"]);
+    }
+
+    #[test]
+    fn parse_escaped_double_quote_inside_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello\\\"world\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // Inside double quotes, \" should produce literal "
+        assert_eq!(parsed.args(), &["hello\"world"]);
+    }
+
+    #[test]
+    fn parse_double_quote_with_escaped_quote_at_boundaries() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"\\\"start\" \"end\\\"\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // \" at start and end of double quoted strings
+        assert_eq!(parsed.args(), &["\"start", "end\""]);
+    }
+
+    #[test]
+    fn parse_multiple_escaped_backslashes_in_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"\\\\\\\\\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // Four backslashes become two
+        assert_eq!(parsed.args(), &["\\\\"]);
+    }
+
+    #[test]
+    fn parse_backslash_with_non_escapable_char_in_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello\\nworld\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // \n inside double quotes: backslash followed by 'n' (not escape sequence)
+        // According to bash, only \, ", $, `, newline are escapable
+        // So \n should remain as literal \n
+        assert_eq!(parsed.args(), &["hello\\nworld"]);
+    }
+
+    #[test]
+    fn parse_mixed_escapes_in_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"A \\\\ escapes itself\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // \\ produces single \
+        assert_eq!(parsed.args(), &["A \\ escapes itself"]);
+    }
+
+    #[test]
+    fn parse_double_quotes_with_escaped_quote_in_middle() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"A \\\" inside double quotes\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // \" produces literal "
+        assert_eq!(parsed.args(), &["A \" inside double quotes"]);
+    }
+
+    #[test]
+    fn parse_codecrafter_test_case() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"script'hello'\\\\'example\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // script'hello' (single quotes literal)
+        // \\ (produces single \)
+        // ' (literal single quote)
+        // example
+        assert_eq!(parsed.args(), &["script'hello'\\'example"]);
+    }
+
+    #[test]
+    fn parse_escaped_quote_allows_concatenation() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"hello\\\"insidequotes\"script\\\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // "hello\"insidequotes" produces: hello"insidequotes
+        // script\" (outside quotes) produces: script"
+        // Concatenated: hello"insidequotesscript"
+        assert_eq!(parsed.args(), &["hello\"insidequotesscript\""]);
+    }
+
+    #[test]
+    fn parse_single_backslash_before_regular_char_in_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"test\\avalue\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // \a is not escapable in double quotes, so backslash is literal
+        assert_eq!(parsed.args(), &["test\\avalue"]);
+    }
+
+    #[test]
+    fn parse_filename_with_escaped_backslash_and_quote() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat \"/tmp/\\\"f\\\\93\\\"\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        // \" produces ", \\ produces \
+        // Result: /tmp/"f\93"
+        assert_eq!(parsed.args(), &["/tmp/\"f\\93\""]);
     }
 }
