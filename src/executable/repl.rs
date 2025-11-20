@@ -78,7 +78,7 @@ impl Repl {
                     }
                     CommandResult::Empty => {
                         // Command executed successfully with no output (like cd)
-                        ()
+                        
                     }
                 },
             };

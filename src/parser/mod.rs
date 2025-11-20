@@ -191,7 +191,7 @@ impl InputParser {
         let parsed_args = self.parse_args(&quote_positions, input);
 
         let command = &parsed_args[0];
-        return Ok(ParsedCommand::new(command, parsed_args[1..].to_vec()));
+        Ok(ParsedCommand::new(command, parsed_args[1..].to_vec()))
     }
 }
 

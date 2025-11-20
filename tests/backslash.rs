@@ -28,8 +28,7 @@ fn echo_backslash_escapes_space() {
 
     assert!(
         lines.contains(&"hello world".to_string()),
-        "Expected 'hello world' in output, got: {:?}",
-        lines
+        "Expected 'hello world' in output, got: {lines:?}"
     );
 }
 
@@ -55,8 +54,7 @@ fn echo_multiple_escaped_spaces() {
 
     assert!(
         lines.contains(&"world      script".to_string()),
-        "Expected 'world      script' (6 spaces) in output, got: {:?}",
-        lines
+        "Expected 'world      script' (6 spaces) in output, got: {lines:?}"
     );
 }
 
@@ -82,8 +80,7 @@ fn echo_backslash_inside_double_quotes_preserved() {
 
     assert!(
         lines.contains(&"before\\   after".to_string()),
-        "Expected 'before\\   after' (backslash preserved) in output, got: {:?}",
-        lines
+        "Expected 'before\\   after' (backslash preserved) in output, got: {lines:?}"
     );
 }
 
@@ -109,8 +106,7 @@ fn echo_double_backslash_produces_single() {
 
     assert!(
         lines.contains(&"hello\\world".to_string()),
-        "Expected 'hello\\world' (single backslash) in output, got: {:?}",
-        lines
+        "Expected 'hello\\world' (single backslash) in output, got: {lines:?}"
     );
 }
 
@@ -136,8 +132,7 @@ fn echo_backslash_escapes_special_chars() {
 
     assert!(
         lines.contains(&"$HOME * ?".to_string()),
-        "Expected '$HOME * ?' in output, got: {:?}",
-        lines
+        "Expected '$HOME * ?' in output, got: {lines:?}"
     );
 }
 
@@ -155,8 +150,7 @@ fn cat_file_with_backslash_in_name() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("test content"),
-        "Expected 'test content' in output, got: {}",
-        stdout
+        "Expected 'test content' in output, got: {stdout}"
     );
 
     // Cleanup
@@ -179,8 +173,7 @@ fn cat_files_with_backslashes_inside_double_quotes() {
     // And "/tmp/file\ name" looks for a file with backslash-space
     assert!(
         stdout.contains("content1") && stdout.contains("content2"),
-        "Expected both 'content1' and 'content2' in output, got: {}",
-        stdout
+        "Expected both 'content1' and 'content2' in output, got: {stdout}"
     );
 
     // Cleanup
@@ -215,8 +208,7 @@ fn echo_backslash_not_escape_inside_single_quotes() {
     // Inside single quotes, backslash is literal
     assert!(
         lines.contains(&"hello\\ world".to_string()),
-        "Expected 'hello\\ world' (backslash literal) in output, got: {:?}",
-        lines
+        "Expected 'hello\\ world' (backslash literal) in output, got: {lines:?}"
     );
 }
 
@@ -242,8 +234,7 @@ fn echo_mixed_quotes_and_backslashes() {
 
     assert!(
         lines.contains(&"quoted unquoted".to_string()),
-        "Expected 'quoted unquoted' in output, got: {:?}",
-        lines
+        "Expected 'quoted unquoted' in output, got: {lines:?}"
     );
 }
 
@@ -269,8 +260,7 @@ fn echo_escaped_quotes() {
 
     assert!(
         lines.contains(&"\"hello\" world".to_string()),
-        "Expected '\"hello\" world' in output, got: {:?}",
-        lines
+        "Expected '\"hello\" world' in output, got: {lines:?}"
     );
 }
 
@@ -296,8 +286,7 @@ fn echo_backslash_with_regular_chars() {
 
     assert!(
         lines.contains(&"abc".to_string()),
-        "Expected 'abc' in output, got: {:?}",
-        lines
+        "Expected 'abc' in output, got: {lines:?}"
     );
 }
 
@@ -323,7 +312,6 @@ fn echo_mixed_escaped_and_unescaped_spaces() {
 
     assert!(
         lines.contains(&"hello world foo".to_string()),
-        "Expected 'hello world foo' in output, got: {:?}",
-        lines
+        "Expected 'hello world foo' in output, got: {lines:?}"
     );
 }
