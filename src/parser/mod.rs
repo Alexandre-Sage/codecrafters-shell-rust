@@ -1,6 +1,6 @@
 use std::{char, usize};
 
-use crate::exceptions::commands::CommandError;
+use crate::{exceptions::commands::CommandError, port::command};
 
 const SINGLE_QUOTE: char = '\'';
 const DOUBLE_QUOTE: char = '"';
@@ -192,11 +192,11 @@ impl InputParser {
     }
 
     pub fn parse(&self, input: &str) -> Result<ParsedCommand, CommandError> {
-        let (command, args) = input.split_once(" ").unwrap_or((input, ""));
+        let quote_positions = self.quote_positions(input)?;
+        let parsed_args = self.parse_args(&quote_positions, input);
 
-        let quote_positions = self.quote_positions(args)?;
-        let parsed_args = self.parse_args(&quote_positions, args);
-        return Ok(ParsedCommand::new(command, parsed_args));
+        let command = &parsed_args[0];
+        return Ok(ParsedCommand::new(command, parsed_args[1..].to_vec()));
     }
 }
 
