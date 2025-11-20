@@ -63,12 +63,12 @@ pub struct ParsedCommand(String, Vec<String>);
 
 impl ParsedCommand {
     pub fn new(command: &str, args: Vec<String>) -> Self {
-        let command = command
-            .chars()
-            .filter(|char| *char != SINGLE_QUOTE && *char != DOUBLE_QUOTE)
-            .collect();
+        // let command = command
+        //     .chars()
+        //     .filter(|char| *char != SINGLE_QUOTE && *char != DOUBLE_QUOTE)
+        //     .collect();
 
-        Self(command, args)
+        Self(command.to_owned(), args)
     }
 
     pub fn args(&self) -> &[String] {
