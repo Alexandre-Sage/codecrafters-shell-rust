@@ -59,7 +59,12 @@ pub struct ParsedCommand(String, Vec<String>);
 
 impl ParsedCommand {
     pub fn new(command: &str, args: Vec<String>) -> Self {
-        Self(command.to_owned(), args)
+        let command = command
+            .chars()
+            .filter(|char| *char != SINGLE_QUOTE && *char != DOUBLE_QUOTE)
+            .collect();
+
+        Self(command, args)
     }
 
     pub fn args(&self) -> &[String] {
@@ -69,20 +74,6 @@ impl ParsedCommand {
     pub fn command(&self) -> &str {
         &self.0
     }
-
-    fn from_raw((command, args): (&str, &str)) -> Self {
-        let args = args
-            .split_whitespace()
-            .map(|item| item.to_owned())
-            .collect();
-
-        let command = command
-            .chars()
-            .filter(|char| *char != SINGLE_QUOTE && *char != DOUBLE_QUOTE)
-            .collect();
-
-        Self(command, args)
-    }
 }
 
 impl InputParser {
@@ -91,11 +82,21 @@ impl InputParser {
     }
 
     fn quote_positions(&self, args: &str) -> Result<Vec<QuotePosition>, CommandError> {
+        if !args.contains(SINGLE_QUOTE) && !args.contains(DOUBLE_QUOTE) {
+            return Ok(vec![]);
+        }
+
         let mut opening_quote: Option<(QuoteType, usize)> = None;
+        let mut escape_next_quote = false;
         let mut quote_positions: Vec<QuotePosition> = Vec::new();
 
         for (idx, char) in args.chars().enumerate() {
-            if char == SINGLE_QUOTE || char == DOUBLE_QUOTE {
+            if char == BACK_SLASH && !escape_next_quote {
+                escape_next_quote = true;
+                continue;
+            }
+
+            if (char == SINGLE_QUOTE || char == DOUBLE_QUOTE) && !escape_next_quote {
                 let quote_type = QuoteType::try_from(char)?;
 
                 match opening_quote {
@@ -111,6 +112,7 @@ impl InputParser {
                     }
                 }
             }
+            escape_next_quote = false
         }
 
         if opening_quote.is_some() {
@@ -120,7 +122,7 @@ impl InputParser {
         Ok(quote_positions)
     }
 
-    pub fn parse_quote(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
+    pub fn parse_args(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
         let quote_positions_filtered: Vec<_> = quote_positions
             .iter()
             .filter(|position| position.start() + 1 != *position.end())
@@ -128,19 +130,27 @@ impl InputParser {
 
         let mut parsed_args: Vec<String> = vec![];
         let mut current_arg: Vec<char> = vec![];
+        let mut escape_next = false;
         for (idx, char) in args.chars().enumerate() {
-            // Use strict inequalities (> and <) to exclude quote boundaries                                                                                                          │
-            // This means opening/closing quotes are NOT "inside" the range                                                                                                           │
-            let maybe_quote_pos = quote_positions_filtered
-                .iter()
-                .find(|pos| idx > *pos.start() && idx < *pos.end());
+            if !quote_positions_filtered.is_empty() {
+                // Use strict inequalities (> and <) to exclude quote boundaries                                                                                                          │
+                // This means opening/closing quotes are NOT "inside" the range                                                                                                           │
+                let maybe_quote_pos = quote_positions_filtered
+                    .iter()
+                    .find(|pos| idx > *pos.start() && idx < *pos.end());
 
-            if maybe_quote_pos.is_some() {
-                current_arg.push(char);
+                if maybe_quote_pos.is_some() {
+                    current_arg.push(char);
+                    continue;
+                }
+            }
+
+            if char == BACK_SLASH && !escape_next && idx != args.len() - 1 {
+                escape_next = true;
                 continue;
             }
 
-            if char == ' ' {
+            if char == ' ' && !escape_next {
                 if !current_arg.is_empty() {
                     parsed_args.push(current_arg.iter().collect());
                     current_arg.clear();
@@ -148,13 +158,14 @@ impl InputParser {
                 continue;
             }
 
-            if char != SINGLE_QUOTE && char != DOUBLE_QUOTE {
+            if (char != SINGLE_QUOTE && char != DOUBLE_QUOTE && char != BACK_SLASH) || escape_next {
                 current_arg.push(char);
             }
 
             if idx == args.len() - 1 && !current_arg.is_empty() {
                 parsed_args.push(current_arg.iter().collect());
             }
+            escape_next = false
         }
         parsed_args
     }
@@ -162,13 +173,9 @@ impl InputParser {
     pub fn parse(&self, input: &str) -> Result<ParsedCommand, CommandError> {
         let (command, args) = input.split_once(" ").unwrap_or((input, ""));
 
-        if args.contains(SINGLE_QUOTE) || args.contains(DOUBLE_QUOTE) {
-            let quote_positions = self.quote_positions(args)?;
-            let parsed_args = self.parse_quote(&quote_positions, args);
-            return Ok(ParsedCommand::new(command, parsed_args));
-        }
-
-        Ok(ParsedCommand::from_raw((command, args)))
+        let quote_positions = self.quote_positions(args)?;
+        let parsed_args = self.parse_args(&quote_positions, args);
+        return Ok(ParsedCommand::new(command, parsed_args));
     }
 }
 

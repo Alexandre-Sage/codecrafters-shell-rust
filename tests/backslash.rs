@@ -166,25 +166,26 @@ fn cat_file_with_backslash_in_name() {
 #[test]
 fn cat_files_with_backslashes_inside_double_quotes() {
     // Create test files
-    std::fs::write("/tmp/file\\name", "content1").unwrap();
-    std::fs::write("/tmp/file name", "content2").unwrap();
+    // Inside double quotes, backslashes are literal, so we need files with actual backslashes
+    std::fs::write("/tmp/file\\\\name", "content1").unwrap();
+    std::fs::write("/tmp/file\\ name", "content2").unwrap();
 
     let output = test_case("cat \"/tmp/file\\\\name\" \"/tmp/file\\ name\"", true);
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    
+
     // Inside double quotes, backslashes are preserved literally
-    // So "/tmp/file\\name" looks for a file literally named with backslash
+    // So "/tmp/file\\name" looks for a file literally named with double-backslash
     // And "/tmp/file\ name" looks for a file with backslash-space
     assert!(
-        stdout.contains("content1") || stdout.contains("content2"),
-        "Expected file contents in output, got: {}",
+        stdout.contains("content1") && stdout.contains("content2"),
+        "Expected both 'content1' and 'content2' in output, got: {}",
         stdout
     );
 
     // Cleanup
-    std::fs::remove_file("/tmp/file\\name").ok();
-    std::fs::remove_file("/tmp/file name").ok();
+    std::fs::remove_file("/tmp/file\\\\name").ok();
+    std::fs::remove_file("/tmp/file\\ name").ok();
 }
 
 // ========================================================================
