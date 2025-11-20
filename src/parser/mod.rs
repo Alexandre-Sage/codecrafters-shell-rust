@@ -1,6 +1,6 @@
 use std::{char, usize};
 
-use crate::{exceptions::commands::CommandError, port::command};
+use crate::exceptions::commands::CommandError;
 
 const SINGLE_QUOTE: char = '\'';
 const DOUBLE_QUOTE: char = '"';
@@ -63,11 +63,6 @@ pub struct ParsedCommand(String, Vec<String>);
 
 impl ParsedCommand {
     pub fn new(command: &str, args: Vec<String>) -> Self {
-        // let command = command
-        //     .chars()
-        //     .filter(|char| *char != SINGLE_QUOTE && *char != DOUBLE_QUOTE)
-        //     .collect();
-
         Self(command.to_owned(), args)
     }
 
