@@ -4,6 +4,7 @@ use crate::exceptions::commands::CommandError;
 
 const SINGLE_QUOTE: char = '\'';
 const DOUBLE_QUOTE: char = '"';
+const BACK_SLASH: char = '\\';
 
 #[derive(Debug, Clone, Copy)]
 pub enum QuotePosition {
@@ -126,7 +127,7 @@ impl InputParser {
             .collect();
 
         let mut parsed_args: Vec<String> = vec![];
-        let mut tmp: Vec<char> = vec![];
+        let mut current_arg: Vec<char> = vec![];
         for (idx, char) in args.chars().enumerate() {
             // Use strict inequalities (> and <) to exclude quote boundaries                                                                                                          │
             // This means opening/closing quotes are NOT "inside" the range                                                                                                           │
@@ -135,24 +136,24 @@ impl InputParser {
                 .find(|pos| idx > *pos.start() && idx < *pos.end());
 
             if maybe_quote_pos.is_some() {
-                tmp.push(char);
+                current_arg.push(char);
                 continue;
             }
 
             if char == ' ' {
-                if !tmp.is_empty() {
-                    parsed_args.push(tmp.iter().collect());
-                    tmp.clear();
+                if !current_arg.is_empty() {
+                    parsed_args.push(current_arg.iter().collect());
+                    current_arg.clear();
                 }
                 continue;
             }
 
             if char != SINGLE_QUOTE && char != DOUBLE_QUOTE {
-                tmp.push(char);
+                current_arg.push(char);
             }
 
-            if idx == args.len() - 1 && !tmp.is_empty() {
-                parsed_args.push(tmp.iter().collect());
+            if idx == args.len() - 1 && !current_arg.is_empty() {
+                parsed_args.push(current_arg.iter().collect());
             }
         }
         parsed_args
@@ -448,5 +449,226 @@ mod tests {
         let parsed = result.unwrap();
         assert_eq!(parsed.command(), "echo");
         assert_eq!(parsed.args(), &["abcd"]);
+    }
+
+    // ========================================================================
+    // Happy Path Tests - Backslash Escaping
+    // ========================================================================
+
+    #[test]
+    fn parse_backslash_escapes_space() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\\ world");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello world"]);
+    }
+
+    #[test]
+    fn parse_multiple_escaped_spaces() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo world\\ \\ \\ \\ \\ \\ script");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["world      script"]);
+    }
+
+    #[test]
+    fn parse_backslash_inside_double_quotes_preserved() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"before\\   after\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["before\\   after"]);
+    }
+
+    #[test]
+    fn parse_backslash_escapes_special_chars() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \\$HOME");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["$HOME"]);
+    }
+
+    #[test]
+    fn parse_backslash_escapes_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \\\"hello\\\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["\"hello\""]);
+    }
+
+    #[test]
+    fn parse_backslash_escapes_single_quote() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \\'hello\\'");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["'hello'"]);
+    }
+
+    #[test]
+    fn parse_backslash_at_end_of_argument() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\\ ");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello "]);
+    }
+
+    #[test]
+    fn parse_double_backslash_produces_single() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\\\\world");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello\\world"]);
+    }
+
+    #[test]
+    fn parse_backslash_with_regular_char() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \\a\\b\\c");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["abc"]);
+    }
+
+    #[test]
+    fn parse_mixed_escaped_and_unescaped_spaces() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\\ world foo");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello world", "foo"]);
+    }
+
+    // ========================================================================
+    // Edge Case Tests - Backslash Escaping
+    // ========================================================================
+
+    #[test]
+    fn parse_backslash_in_filename() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat /tmp/file\\ name");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["/tmp/file name"]);
+    }
+
+    #[test]
+    fn parse_double_backslash_inside_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat \"/tmp/file\\\\name\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["/tmp/file\\\\name"]);
+    }
+
+    #[test]
+    fn parse_backslash_space_inside_double_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat \"/tmp/file\\ name\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["/tmp/file\\ name"]);
+    }
+
+    #[test]
+    fn parse_multiple_files_with_backslashes_in_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("cat \"/tmp/file\\\\name\" \"/tmp/file\\ name\"");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["/tmp/file\\\\name", "/tmp/file\\ name"]);
+    }
+
+    #[test]
+    fn parse_backslash_does_not_escape_inside_single_quotes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo 'hello\\ world'");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // Inside single quotes, backslash is literal
+        assert_eq!(parsed.args(), &["hello\\ world"]);
+    }
+
+    #[test]
+    fn parse_mixed_quotes_and_backslashes() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo \"quoted\"\\ unquoted");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["quoted unquoted"]);
+    }
+
+    #[test]
+    fn parse_backslash_newline_continuation() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\\nworld");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // Backslash followed by 'n' produces literal 'n'
+        assert_eq!(parsed.args(), &["hellonworld"]);
+    }
+
+    #[test]
+    fn parse_command_with_escaped_backslash() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo C:\\\\Users\\\\file");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["C:\\Users\\file"]);
+    }
+
+    #[test]
+    fn parse_trailing_backslash_escapes_nothing() {
+        let parser = InputParser::new();
+        let result = parser.parse("echo hello\\");
+
+        assert!(result.is_ok());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        // Trailing backslash with nothing to escape
+        // This might be implementation-specific, but typically treated as literal
+        assert_eq!(parsed.args(), &["hello"]);
     }
 }
