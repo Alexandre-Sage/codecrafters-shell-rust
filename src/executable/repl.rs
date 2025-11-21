@@ -11,7 +11,7 @@ use crate::{
         CommandToken,
     },
     exceptions::commands::CommandError,
-    parser::InputParser,
+    shell::input_parser::InputParser,
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::path::Path,
 };

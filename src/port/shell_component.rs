@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     exceptions::{application::ApplicationError, commands::CommandError},
-    parser::ParsedCommand,
+    shell::input_parser::ParsedCommand,
     port::command::CommandResult,
 };
 
