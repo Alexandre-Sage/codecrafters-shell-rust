@@ -33,11 +33,6 @@ impl Cd {
             return Ok(home_dir.join(remaining));
         }
 
-        // if args.starts_with("~") {
-        //     let remaining = &args[1..];
-        //     return Ok(home_dir.join(remaining));
-        // }
-
         Ok(PathBuf::from(args.trim()))
     }
 }
@@ -53,8 +48,6 @@ impl Command for Cd {
         if self.should_go_to_homedir(args) {
             return self.change_dir(home_dir);
         }
-
-        // let args_parts: Vec<_> = args.split_whitespace().collect();
 
         if args.len() > 1 {
             return Err(CommandError::TooManyArguments("1".to_string(), args.len()));

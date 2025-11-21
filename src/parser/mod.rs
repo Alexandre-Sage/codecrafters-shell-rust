@@ -1,6 +1,6 @@
 use std::{char, usize};
 
-use crate::exceptions::commands::CommandError;
+use crate::{exceptions::commands::CommandError, shell::redirection::RedirectionContext};
 
 const SINGLE_QUOTE: char = '\'';
 const DOUBLE_QUOTE: char = '"';
@@ -59,19 +59,27 @@ impl QuotePosition {
 pub struct InputParser;
 
 #[derive(Debug)]
-pub struct ParsedCommand(String, Vec<String>);
+pub struct ParsedCommand {
+    command: String,
+    args: Vec<String>,
+    redirection: Option<RedirectionContext>,
+}
 
 impl ParsedCommand {
     pub fn new(command: &str, args: Vec<String>) -> Self {
-        Self(command.to_owned(), args)
+        Self {
+            command: command.to_owned(),
+            args,
+            redirection: None,
+        }
     }
 
     pub fn args(&self) -> &[String] {
-        &self.1
+        &self.args
     }
 
     pub fn command(&self) -> &str {
-        &self.0
+        &self.command
     }
 }
 
