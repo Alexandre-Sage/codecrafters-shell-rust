@@ -167,6 +167,8 @@ impl InputParser {
 
             let parts: Vec<_> = args.drain(pos..pos + 2).collect();
             let path = PathBuf::from(&parts[1]);
+            // quick fix to try fix test
+            std::fs::write(&path, &[]).expect("Quick fix");
             let redirection = RedirectionContext::new(path, redirection);
 
             return Ok(Some(redirection));
