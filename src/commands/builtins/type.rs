@@ -37,13 +37,13 @@ impl Command for Type {
 
         if CommandToken::from_str(arg).is_ok() {
             return Ok(CommandResult::Message(
-                arg.to_owned() + " is a shell builtin",
+                arg.to_owned() + " is a shell builtin\n",
             ));
         }
 
         match self.path_dirs.find_executable(arg) {
             Some(exe_path) => Ok(CommandResult::Message(format!(
-                "{arg} is {}",
+                "{arg} is {}\n",
                 exe_path.display()
             ))),
             None => Err(TypeCommandError::NotFound(arg.to_string()).into()),
