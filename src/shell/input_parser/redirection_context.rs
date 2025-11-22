@@ -5,18 +5,36 @@ use crate::{exceptions::commands::CommandError, shell::input_parser::commons::RE
 #[derive(Debug, PartialEq)]
 pub enum RedirectionChannel {
     Stdout,
+    Stderr,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum RedirectionType {
-    Output(RedirectionChannel),
+    WriteOutput(RedirectionChannel),
+}
+
+impl RedirectionType {
+    pub fn should_write_stderr(&self) -> bool {
+        matches!(
+            self,
+            RedirectionType::WriteOutput(RedirectionChannel::Stderr)
+        )
+    }
+
+    pub fn should_write_stdout(&self) -> bool {
+        matches!(
+            self,
+            RedirectionType::WriteOutput(RedirectionChannel::Stdout)
+        )
+    }
 }
 
 impl TryFrom<&str> for RedirectionType {
     type Error = CommandError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            ">" | "1>" => Ok(Self::Output(RedirectionChannel::Stdout)),
+            ">" | "1>" => Ok(Self::WriteOutput(RedirectionChannel::Stdout)),
+            "2>" => Ok(Self::WriteOutput(RedirectionChannel::Stderr)),
             _ => Err(CommandError::Unknown("No redirection".to_owned())),
         }
     }

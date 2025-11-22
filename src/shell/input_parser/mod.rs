@@ -904,7 +904,7 @@ mod tests {
         assert_eq!(redir.path, PathBuf::from("output.txt"));
         assert_eq!(
             redir.redirection_type,
-            RedirectionType::Output(redirection_context::RedirectionChannel::Stdout)
+            RedirectionType::WriteOutput(redirection_context::RedirectionChannel::Stdout)
         );
     }
 

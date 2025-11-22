@@ -77,14 +77,18 @@ impl Repl {
             }
             CommandResult::Stdio(stdout, stderr) => {
                 if let Some(redirection_context) = redirection {
-                    if matches!(
-                        redirection_context.redirection_type,
-                        RedirectionType::Output(RedirectionChannel::Stdout)
-                    ) {
+                    if redirection_context.redirection_type.should_write_stdout() {
                         eprint!("{stderr}");
                         return self
                             .file_manager
                             .write_to_file(&redirection_context.path, stdout);
+                    }
+
+                    if redirection_context.redirection_type.should_write_stderr() {
+                        print!("{stdout}");
+                        return self
+                            .file_manager
+                            .write_to_file(&redirection_context.path, stderr);
                     }
                 }
                 print!("{stdout}");
@@ -116,7 +120,15 @@ impl Repl {
             let command = self.builtins.execute(parsed_command);
             match command {
                 Err(err) => {
-                    eprintln!("{err}");
+                    if let Some(redirection_context) = redirection {
+                        if redirection_context.redirection_type.should_write_stderr() {
+                            return self
+                                .file_manager
+                                .write_to_file(&redirection_context.path, err.to_string());
+                        }
+                    } else {
+                        eprintln!("{err}");
+                    }
                 }
                 Ok(res) => self.handle_output(res, redirection)?,
             };
