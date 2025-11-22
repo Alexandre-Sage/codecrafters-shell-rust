@@ -69,9 +69,11 @@ impl Repl {
             }
             CommandResult::Message(message) => {
                 if let Some(redirection_context) = redirection {
-                    return self
-                        .file_manager
-                        .write_to_file(&redirection_context.path, message);
+                    if redirection_context.redirection_type.should_write_stdout() {
+                        return self
+                            .file_manager
+                            .write_to_file(&redirection_context.path, message);
+                    }
                 }
                 print!("{message}")
             }
