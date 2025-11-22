@@ -94,7 +94,13 @@ impl Repl {
                 // Command executed successfully with no output (like cd)
             }
         };
-        Ok(())
+
+        io::stderr()
+            .flush()
+            .map_err(|err| CommandError::Unknown(err.to_string()))?;
+        io::stdout()
+            .flush()
+            .map_err(|err| CommandError::Unknown(err.to_string()))
     }
 
     pub fn spawn(&self) -> Result<(), CommandError> {
@@ -120,10 +126,6 @@ impl Repl {
                 }
                 Ok(res) => self.handle_output(res, redirection)?,
             };
-
-            io::stdout()
-                .flush()
-                .map_err(|err| CommandError::Unknown(err.to_string()))?;
         }
     }
 }
