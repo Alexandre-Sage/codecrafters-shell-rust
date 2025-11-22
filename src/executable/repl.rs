@@ -87,8 +87,8 @@ impl Repl {
                             .write_to_file(&redirection_context.path, stdout);
                     }
                 }
-                println!("{stdout}");
-                eprintln!("{stderr}");
+                print!("{stdout}");
+                eprint!("{stderr}");
             }
             CommandResult::Empty => {
                 // Command executed successfully with no output (like cd)
