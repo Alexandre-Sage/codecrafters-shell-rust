@@ -2,11 +2,12 @@ pub mod commons;
 pub mod quote;
 pub mod redirection_context;
 
-use std::{char, path::PathBuf, usize};
+use std::{char, path::PathBuf, sync::Arc, usize};
 
 use crate::{
     exceptions::commands::CommandError,
     shell::{
+        file::FileManager,
         input_parser::{
             commons::{BACK_SLASH, DOUBLE_QUOTE, SINGLE_QUOTE},
             quote::{QuotePosition, QuoteType},
@@ -16,7 +17,9 @@ use crate::{
     },
 };
 
-pub struct InputParser;
+pub struct InputParser {
+    file_manager: Arc<FileManager>,
+}
 
 #[derive(Debug)]
 pub struct ParsedCommand(String, Vec<String>);
@@ -36,8 +39,8 @@ impl ParsedCommand {
 }
 
 impl InputParser {
-    pub fn new() -> Self {
-        Self
+    pub fn new(file_manager: Arc<FileManager>) -> Self {
+        Self { file_manager }
     }
 
     fn quote_positions(&self, args: &str) -> Result<Vec<QuotePosition>, CommandError> {
@@ -163,7 +166,8 @@ impl InputParser {
             }
 
             let parts: Vec<_> = args.drain(pos..pos + 2).collect();
-            let redirection = RedirectionContext::new(PathBuf::from(&parts[1]), redirection);
+            let path = PathBuf::from(&parts[1]);
+            let redirection = RedirectionContext::new(path, redirection);
 
             return Ok(Some(redirection));
         }
@@ -196,7 +200,7 @@ mod tests {
 
     #[test]
     fn parse_simple_single_quoted_string() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'hello world'");
 
         assert!(result.is_ok());
@@ -208,7 +212,7 @@ mod tests {
 
     #[test]
     fn parse_single_quotes_preserve_multiple_spaces() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'hello    world'");
 
         assert!(result.is_ok());
@@ -220,7 +224,7 @@ mod tests {
 
     #[test]
     fn parse_multiple_single_quoted_arguments() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat '/tmp/file1' '/tmp/file2'");
 
         assert!(result.is_ok());
@@ -232,7 +236,7 @@ mod tests {
 
     #[test]
     fn parse_adjacent_single_quoted_strings_concatenate() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'hello''world'");
 
         assert!(result.is_ok());
@@ -244,7 +248,7 @@ mod tests {
 
     #[test]
     fn parse_empty_single_quotes_ignored() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello''world");
 
         assert!(result.is_ok());
@@ -256,7 +260,7 @@ mod tests {
 
     #[test]
     fn parse_single_quotes_with_special_characters() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo '$HOME * ? [] | & ;'");
 
         assert!(result.is_ok());
@@ -273,7 +277,7 @@ mod tests {
 
     #[test]
     fn parse_single_quote_with_spaces_in_filename() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat '/tmp/file name with spaces'");
 
         assert!(result.is_ok());
@@ -285,7 +289,7 @@ mod tests {
 
     #[test]
     fn parse_mixed_quoted_and_unquoted() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello 'world test' foo");
 
         assert!(result.is_ok());
@@ -297,7 +301,7 @@ mod tests {
 
     #[test]
     fn parse_unclosed_single_quote_returns_error() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'hello world");
 
         assert!(result.is_err());
@@ -307,7 +311,7 @@ mod tests {
 
     #[test]
     fn parse_only_quotes_no_command() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("'hello'");
 
         assert!(result.is_ok());
@@ -323,7 +327,7 @@ mod tests {
 
     #[test]
     fn parse_simple_double_quoted_string() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello world\"");
 
         assert!(result.is_ok());
@@ -335,7 +339,7 @@ mod tests {
 
     #[test]
     fn parse_double_quotes_preserve_multiple_spaces() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello    world\"");
 
         assert!(result.is_ok());
@@ -347,7 +351,7 @@ mod tests {
 
     #[test]
     fn parse_multiple_double_quoted_arguments() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat \"/tmp/file1\" \"/tmp/file2\"");
 
         assert!(result.is_ok());
@@ -359,7 +363,7 @@ mod tests {
 
     #[test]
     fn parse_adjacent_double_quoted_strings_concatenate() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello\"\"world\"");
 
         assert!(result.is_ok());
@@ -371,7 +375,7 @@ mod tests {
 
     #[test]
     fn parse_empty_double_quotes_ignored() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\"\"world");
 
         assert!(result.is_ok());
@@ -383,7 +387,7 @@ mod tests {
 
     #[test]
     fn parse_double_quote_with_spaces_in_filename() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat \"/tmp/file name with spaces\"");
 
         assert!(result.is_ok());
@@ -395,7 +399,7 @@ mod tests {
 
     #[test]
     fn parse_mixed_double_quoted_and_unquoted() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello \"world test\" foo");
 
         assert!(result.is_ok());
@@ -407,7 +411,7 @@ mod tests {
 
     #[test]
     fn parse_unclosed_double_quote_returns_error() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello world");
 
         assert!(result.is_err());
@@ -417,7 +421,7 @@ mod tests {
 
     #[test]
     fn parse_double_quotes_command_name() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("\"echo\" hello");
 
         assert!(result.is_ok());
@@ -429,7 +433,7 @@ mod tests {
 
     #[test]
     fn parse_double_quotes_only_command() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("\"hello\"");
 
         assert!(result.is_ok());
@@ -441,7 +445,7 @@ mod tests {
 
     #[test]
     fn parse_mixed_single_and_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'single' \"double\" plain");
 
         assert!(result.is_ok());
@@ -453,7 +457,7 @@ mod tests {
 
     #[test]
     fn parse_double_quotes_with_single_quote_inside() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello'world\"");
 
         assert!(result.is_ok());
@@ -465,7 +469,7 @@ mod tests {
 
     #[test]
     fn parse_single_quotes_with_double_quote_inside() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'hello\"world'");
 
         assert!(result.is_ok());
@@ -477,7 +481,7 @@ mod tests {
 
     #[test]
     fn parse_alternating_single_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"a\"'b'\"c\"'d'");
 
         assert!(result.is_ok());
@@ -493,7 +497,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_escapes_space() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\\ world");
 
         assert!(result.is_ok());
@@ -505,7 +509,7 @@ mod tests {
 
     #[test]
     fn parse_multiple_escaped_spaces() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo world\\ \\ \\ \\ \\ \\ script");
 
         assert!(result.is_ok());
@@ -517,7 +521,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_inside_double_quotes_preserved() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"before\\   after\"");
 
         assert!(result.is_ok());
@@ -529,7 +533,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_escapes_special_chars() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \\$HOME");
 
         assert!(result.is_ok());
@@ -541,7 +545,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_escapes_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \\\"hello\\\"");
 
         assert!(result.is_ok());
@@ -553,7 +557,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_escapes_single_quote() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \\'hello\\'");
 
         assert!(result.is_ok());
@@ -565,7 +569,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_at_end_of_argument() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\\ ");
 
         assert!(result.is_ok());
@@ -577,7 +581,7 @@ mod tests {
 
     #[test]
     fn parse_double_backslash_produces_single() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\\\\world");
 
         assert!(result.is_ok());
@@ -589,7 +593,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_with_regular_char() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \\a\\b\\c");
 
         assert!(result.is_ok());
@@ -601,7 +605,7 @@ mod tests {
 
     #[test]
     fn parse_mixed_escaped_and_unescaped_spaces() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\\ world foo");
 
         assert!(result.is_ok());
@@ -617,7 +621,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_in_filename() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat /tmp/file\\ name");
 
         assert!(result.is_ok());
@@ -640,7 +644,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_space_inside_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat \"/tmp/file\\ name\"");
 
         assert!(result.is_ok());
@@ -663,7 +667,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_does_not_escape_inside_single_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo 'hello\\ world'");
 
         assert!(result.is_ok());
@@ -676,7 +680,7 @@ mod tests {
 
     #[test]
     fn parse_mixed_quotes_and_backslashes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"quoted\"\\ unquoted");
 
         assert!(result.is_ok());
@@ -688,7 +692,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_newline_continuation() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\\nworld");
 
         assert!(result.is_ok());
@@ -701,7 +705,7 @@ mod tests {
 
     #[test]
     fn parse_command_with_escaped_backslash() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo C:\\\\Users\\\\file");
 
         assert!(result.is_ok());
@@ -713,7 +717,7 @@ mod tests {
 
     #[test]
     fn parse_trailing_backslash_escapes_nothing() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello\\");
 
         assert!(result.is_ok());
@@ -731,7 +735,7 @@ mod tests {
 
     #[test]
     fn parse_double_backslash_inside_double_quotes_produces_single() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello\\\\world\"");
 
         assert!(result.is_ok());
@@ -744,7 +748,7 @@ mod tests {
 
     #[test]
     fn parse_escaped_double_quote_inside_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello\\\"world\"");
 
         assert!(result.is_ok());
@@ -757,7 +761,7 @@ mod tests {
 
     #[test]
     fn parse_double_quote_with_escaped_quote_at_boundaries() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"\\\"start\" \"end\\\"\"");
 
         assert!(result.is_ok());
@@ -770,7 +774,7 @@ mod tests {
 
     #[test]
     fn parse_multiple_escaped_backslashes_in_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"\\\\\\\\\"");
 
         assert!(result.is_ok());
@@ -783,7 +787,7 @@ mod tests {
 
     #[test]
     fn parse_backslash_with_non_escapable_char_in_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello\\nworld\"");
 
         assert!(result.is_ok());
@@ -798,7 +802,7 @@ mod tests {
 
     #[test]
     fn parse_mixed_escapes_in_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"A \\\\ escapes itself\"");
 
         assert!(result.is_ok());
@@ -811,7 +815,7 @@ mod tests {
 
     #[test]
     fn parse_double_quotes_with_escaped_quote_in_middle() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"A \\\" inside double quotes\"");
 
         assert!(result.is_ok());
@@ -824,7 +828,7 @@ mod tests {
 
     #[test]
     fn parse_codecrafter_test_case() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"script'hello'\\\\'example\"");
 
         assert!(result.is_ok());
@@ -840,7 +844,7 @@ mod tests {
 
     #[test]
     fn parse_escaped_quote_allows_concatenation() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"hello\\\"insidequotes\"script\\\"");
 
         assert!(result.is_ok());
@@ -855,7 +859,7 @@ mod tests {
 
     #[test]
     fn parse_single_backslash_before_regular_char_in_double_quotes() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo \"test\\avalue\"");
 
         assert!(result.is_ok());
@@ -868,7 +872,7 @@ mod tests {
 
     #[test]
     fn parse_filename_with_escaped_backslash_and_quote() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat \"/tmp/\\\"f\\\\93\\\"\"");
 
         assert!(result.is_ok());
@@ -886,7 +890,7 @@ mod tests {
 
     #[test]
     fn parse_simple_output_redirection() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello > output.txt");
 
         assert!(result.is_ok());
@@ -906,7 +910,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_with_spaces() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello   >   output.txt");
 
         assert!(result.is_ok());
@@ -921,7 +925,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_with_quoted_filename() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello > \"file with spaces.txt\"");
 
         assert!(result.is_ok());
@@ -936,7 +940,7 @@ mod tests {
 
     #[test]
     fn parse_command_without_redirection() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello world");
 
         assert!(result.is_ok());
@@ -948,7 +952,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_at_end() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("cat file1 file2 > output.txt");
 
         assert!(result.is_ok());
@@ -963,7 +967,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_with_single_quoted_filename() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo test > 'output file.txt'");
 
         assert!(result.is_ok());
@@ -978,7 +982,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_with_path() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello > /tmp/output.txt");
 
         assert!(result.is_ok());
@@ -993,7 +997,7 @@ mod tests {
 
     #[test]
     fn parse_quoted_command_with_redirection() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("\"echo\" hello > out.txt");
 
         assert!(result.is_ok());
@@ -1005,7 +1009,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_in_middle_is_not_detected() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         // The > inside quotes should not be treated as redirection
         let result = parser.parse("echo 'hello > world' test");
 
@@ -1019,7 +1023,7 @@ mod tests {
 
     #[test]
     fn parse_multiple_words_after_redirection_operator() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         // Should only take the first word/quoted string as filename
         let result = parser.parse("echo hello > output.txt extra");
 
@@ -1038,7 +1042,7 @@ mod tests {
 
     #[test]
     fn parse_redirection_without_filename_returns_error() {
-        let parser = InputParser::new();
+        let parser = InputParser::new(Arc::new(FileManager));
         let result = parser.parse("echo hello >");
 
         assert!(result.is_err());

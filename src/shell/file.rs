@@ -30,4 +30,17 @@ impl FileManager {
 
         Ok(path)
     }
+
+    // pub fn parent_is_dir(&self, path: impl Into<PathBuf>) -> Result<PathBuf, CommandError> {
+    //     let path: PathBuf = path.into();
+    //     let parent = path.ancestors().t
+    // }
+
+    pub fn write_to_file(
+        &self,
+        path: &PathBuf,
+        buffer: impl AsRef<[u8]>,
+    ) -> Result<(), CommandError> {
+        std::fs::write(path, buffer).map_err(|err| CommandError::Unknown(err.to_string()))
+    }
 }
