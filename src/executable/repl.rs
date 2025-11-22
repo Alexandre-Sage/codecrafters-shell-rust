@@ -11,9 +11,9 @@ use crate::{
         CommandToken,
     },
     exceptions::commands::CommandError,
-    shell::input_parser::InputParser,
+    external::ExternalCommand,
     port::{command::CommandResult, shell_component::ShellComponent},
-    shell::path::Path,
+    shell::{input_parser::InputParser, path::Path},
 };
 
 pub struct Repl {
@@ -23,11 +23,12 @@ pub struct Repl {
 
 impl Repl {
     pub fn new() -> Self {
-        let paths = Arc::new(Path::from_env());
-        let mut registry = CommandRegistry::new(paths.clone());
+        let path_dirs = Arc::new(Path::from_env());
+        let external_command = Arc::new(ExternalCommand::new(Arc::clone(&path_dirs)));
+        let mut registry = CommandRegistry::new(path_dirs.clone(), external_command);
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
-        registry.register(CommandToken::Type, Arc::new(Type::new(paths.clone())));
+        registry.register(CommandToken::Type, Arc::new(Type::new(path_dirs.clone())));
         registry.register(CommandToken::Pwd, Arc::new(Pwd));
         registry.register(CommandToken::Cd, Arc::new(Cd));
 
@@ -51,7 +52,7 @@ impl Repl {
 
             io::stdin().read_line(&mut buffer).unwrap();
 
-            let parsed_command = match self.input_parser.parse(buffer.trim()) {
+            let (parsed_command, _) = match self.input_parser.parse(buffer.trim()) {
                 Ok(cmd) => cmd,
                 Err(err) => {
                     eprintln!("{err}");
@@ -60,7 +61,6 @@ impl Repl {
             };
 
             let command = self.builtins.execute(parsed_command);
-
             match command {
                 Err(err) => {
                     eprintln!("{err}");
@@ -78,7 +78,6 @@ impl Repl {
                     }
                     CommandResult::Empty => {
                         // Command executed successfully with no output (like cd)
-                        
                     }
                 },
             };

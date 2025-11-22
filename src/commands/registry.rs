@@ -14,13 +14,15 @@ use crate::{
 pub(crate) struct CommandRegistry {
     registry: HashMap<CommandToken, Arc<dyn Command>>,
     path_dirs: Arc<Path>,
+    next: Arc<dyn ShellComponent>,
 }
 
 impl CommandRegistry {
-    pub(crate) fn new(path_dirs: Arc<Path>) -> Self {
+    pub(crate) fn new(path_dirs: Arc<Path>, next: Arc<dyn ShellComponent>) -> Self {
         Self {
             registry: HashMap::default(),
             path_dirs,
+            next,
         }
     }
 
@@ -45,7 +47,7 @@ impl ShellComponent for CommandRegistry {
         Ok(result)
     }
     fn next(&self) -> Option<Arc<dyn ShellComponent>> {
-        Some(Arc::new(ExternalCommand::new(Arc::clone(&self.path_dirs))))
+        Some(Arc::clone(&self.next))
     }
 }
 #[cfg(test)]
@@ -64,7 +66,8 @@ mod tests {
     #[test]
     fn get_command() {
         let paths = Arc::new(Path::new(vec![]));
-        let mut registry = CommandRegistry::new(paths);
+        let external = Arc::new(ExternalCommand::new(paths.clone()));
+        let mut registry = CommandRegistry::new(paths, external);
         registry.register(CommandToken::Exit, Arc::new(FakeCommand));
         let result = registry.try_get("exit");
         assert!(result.is_ok())
@@ -73,7 +76,8 @@ mod tests {
     #[test]
     fn command_not_found() {
         let paths = Arc::new(Path::new(vec![]));
-        let registry = CommandRegistry::new(paths);
+        let external = Arc::new(ExternalCommand::new(paths.clone()));
+        let registry = CommandRegistry::new(paths, external);
         let result = registry.try_get("exit");
         assert!(result.is_err());
         assert_eq!(

@@ -1,17 +1,22 @@
-use std::path::PathBuf;
+use std::{i8, path::PathBuf, process::Stdio};
 
 use crate::{exceptions::commands::CommandError, shell::input_parser::commons::REDIRECT_OUTPUT};
 
 #[derive(Debug, PartialEq)]
-pub enum RedirectionType {
-    Output,
+pub enum RedirectionChannel {
+    Stdout,
 }
 
-impl TryFrom<char> for RedirectionType {
+#[derive(Debug, PartialEq)]
+pub enum RedirectionType {
+    Output(RedirectionChannel),
+}
+
+impl TryFrom<&str> for RedirectionType {
     type Error = CommandError;
-    fn try_from(value: char) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            REDIRECT_OUTPUT => Ok(Self::Output),
+            ">" | "1>" => Ok(Self::Output(RedirectionChannel::Stdout)),
             _ => Err(CommandError::Unknown("No redirection".to_owned())),
         }
     }
