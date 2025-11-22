@@ -1,13 +1,20 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     exceptions::commands::CommandError,
     port::command::{Command, CommandResult},
+    shell::file::FileManager,
 };
 
-pub struct Cd;
+pub struct Cd {
+    file_manager: Arc<FileManager>,
+}
 
 impl Cd {
+    pub fn new(file_manager: Arc<FileManager>) -> Self {
+        Self { file_manager }
+    }
+
     fn change_dir(
         &self,
         dir: PathBuf,
@@ -17,24 +24,6 @@ impl Cd {
 
         Ok(CommandResult::Empty)
     }
-
-    fn should_go_to_homedir(&self, args: &[String]) -> bool {
-        if args.is_empty() {
-            return true;
-        }
-        let arg = &args[0];
-        arg == "~" || arg == "~/"
-    }
-
-    fn format_path(&self, args: &str) -> Result<PathBuf, CommandError> {
-        let home_dir = std::env::home_dir().unwrap();
-
-        if let Some(remaining) = args.strip_prefix("~/") {
-            return Ok(home_dir.join(remaining));
-        }
-
-        Ok(PathBuf::from(args.trim()))
-    }
 }
 
 impl Command for Cd {
@@ -43,21 +32,12 @@ impl Command for Cd {
         args: &[String],
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
-        let home_dir = std::env::home_dir().unwrap();
-
-        if self.should_go_to_homedir(args) {
-            return self.change_dir(home_dir);
-        }
-
         if args.len() > 1 {
             return Err(CommandError::TooManyArguments("1".to_string(), args.len()));
         }
 
-        let path = self.format_path(&args[0])?;
-
-        if !path.exists() {
-            return Err(CommandError::DirectoryNotFound(path));
-        }
+        let path = args.get(0).map_or("", |s| s.as_str());
+        let path = self.file_manager.handle_path(path)?;
 
         if !path.is_dir() {
             return Err(CommandError::NotADirectory(path));
@@ -70,10 +50,15 @@ impl Command for Cd {
 mod tests {
     use super::*;
 
+    fn cd_command() -> Cd {
+        let file_manager = Arc::new(FileManager);
+        Cd::new(file_manager)
+    }
+
     #[test]
     fn change_to_home_if_empty() {
         let current_dir = std::env::current_dir().unwrap();
-        let result = Cd.execute(&[]);
+        let result = cd_command().execute(&[]);
         assert!(result.is_ok());
         assert_ne!(current_dir, std::env::current_dir().unwrap())
     }
@@ -81,14 +66,14 @@ mod tests {
     #[test]
     fn change_to_param_dir() {
         let current_dir = std::env::current_dir().unwrap();
-        let result = Cd.execute(&["/".to_string()]);
+        let result = cd_command().execute(&["/".to_string()]);
         assert!(result.is_ok());
         assert_ne!(current_dir, std::env::current_dir().unwrap())
     }
 
     #[test]
     fn error_not_found() {
-        let result = Cd.execute(&["/x/y/z".to_string()]);
+        let result = cd_command().execute(&["/x/y/z".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -98,7 +83,7 @@ mod tests {
 
     #[test]
     fn errorr_not_a_dir() {
-        let result = Cd.execute(&["/bin/cat".to_string()]);
+        let result = cd_command().execute(&["/bin/cat".to_string()]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -112,7 +97,7 @@ mod tests {
         let original_dir = std::env::current_dir().unwrap();
 
         // Execute cd ~
-        let result = Cd.execute(&["~".to_string()]);
+        let result = cd_command().execute(&["~".to_string()]);
         assert!(result.is_ok(), "cd ~ should succeed");
 
         // Verify we're actually in home directory

@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use crate::exceptions::commands::CommandError;
 
-
 pub struct FileManager;
 
 impl FileManager {
@@ -20,16 +19,15 @@ impl FileManager {
             return Ok(home_dir);
         }
 
-        let path = match args.strip_prefix("~/")   {
+        let path = match args.strip_prefix("~/") {
             Some(sub_directory) => home_dir.join(sub_directory),
-            None => PathBuf::from(args)
-        }
+            None => PathBuf::from(args),
+        };
 
         if !path.exists() {
             return Err(CommandError::DirectoryNotFound(path));
         }
 
-        Ok(PathBuf::from(args.trim()))
+        Ok(path)
     }
-
 }

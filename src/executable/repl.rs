@@ -13,7 +13,7 @@ use crate::{
     exceptions::commands::CommandError,
     external::ExternalCommand,
     port::{command::CommandResult, shell_component::ShellComponent},
-    shell::{input_parser::InputParser, path::Path},
+    shell::{file::FileManager, input_parser::InputParser, path::Path},
 };
 
 pub struct Repl {
@@ -24,13 +24,17 @@ pub struct Repl {
 impl Repl {
     pub fn new() -> Self {
         let path_dirs = Arc::new(Path::from_env());
+        let file_manager = FileManager.into();
         let external_command = Arc::new(ExternalCommand::new(Arc::clone(&path_dirs)));
         let mut registry = CommandRegistry::new(path_dirs.clone(), external_command);
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
         registry.register(CommandToken::Type, Arc::new(Type::new(path_dirs.clone())));
         registry.register(CommandToken::Pwd, Arc::new(Pwd));
-        registry.register(CommandToken::Cd, Arc::new(Cd));
+        registry.register(
+            CommandToken::Cd,
+            Arc::new(Cd::new(Arc::clone(&file_manager))),
+        );
 
         Self {
             builtins: registry,
