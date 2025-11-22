@@ -73,7 +73,7 @@ impl Repl {
                         .file_manager
                         .write_to_file(&redirection_context.path, message);
                 }
-                println!("{message}")
+                print!("{message}")
             }
             CommandResult::Stdio(stdout, stderr) => {
                 if let Some(redirection_context) = redirection {
@@ -94,13 +94,7 @@ impl Repl {
                 // Command executed successfully with no output (like cd)
             }
         };
-
-        io::stderr()
-            .flush()
-            .map_err(|err| CommandError::Unknown(err.to_string()))?;
-        io::stdout()
-            .flush()
-            .map_err(|err| CommandError::Unknown(err.to_string()))
+        Ok(())
     }
 
     pub fn spawn(&self) -> Result<(), CommandError> {
@@ -126,6 +120,13 @@ impl Repl {
                 }
                 Ok(res) => self.handle_output(res, redirection)?,
             };
+
+            io::stderr()
+                .flush()
+                .map_err(|err| CommandError::Unknown(err.to_string()))?;
+            io::stdout()
+                .flush()
+                .map_err(|err| CommandError::Unknown(err.to_string()))?;
         }
     }
 }
