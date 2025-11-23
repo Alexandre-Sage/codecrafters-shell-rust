@@ -893,8 +893,12 @@ mod tests {
 
     #[test]
     fn parse_simple_output_redirection() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("echo hello > output.txt");
+        let result = parser.parse(&format!("echo hello > {}", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -904,7 +908,7 @@ mod tests {
         // Check redirection was detected
         assert!(redirection.is_some());
         let redir = redirection.as_ref().unwrap();
-        assert_eq!(redir.path, PathBuf::from("output.txt"));
+        assert_eq!(redir.path, temp_path);
         assert_eq!(
             redir.redirection_type,
             RedirectionType::WriteOutput(redirection_context::RedirectionChannel::Stdout)
@@ -913,8 +917,12 @@ mod tests {
 
     #[test]
     fn parse_redirection_with_spaces() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("echo hello   >   output.txt");
+        let result = parser.parse(&format!("echo hello   >   {}", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -923,13 +931,17 @@ mod tests {
 
         assert!(redirection.is_some());
         let redir = redirection.as_ref().unwrap();
-        assert_eq!(redir.path, PathBuf::from("output.txt"));
+        assert_eq!(redir.path, temp_path);
     }
 
     #[test]
     fn parse_redirection_with_quoted_filename() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("file with spaces.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("echo hello > \"file with spaces.txt\"");
+        let result = parser.parse(&format!("echo hello > \"{}\"", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -938,7 +950,7 @@ mod tests {
 
         assert!(redirection.is_some());
         let redir = redirection.as_ref().unwrap();
-        assert_eq!(redir.path, PathBuf::from("file with spaces.txt"));
+        assert_eq!(redir.path, temp_path);
     }
 
     #[test]
@@ -955,8 +967,12 @@ mod tests {
 
     #[test]
     fn parse_redirection_at_end() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("cat file1 file2 > output.txt");
+        let result = parser.parse(&format!("cat file1 file2 > {}", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -965,13 +981,17 @@ mod tests {
 
         assert!(redirection.is_some());
         let redir = redirection.as_ref().unwrap();
-        assert_eq!(redir.path, PathBuf::from("output.txt"));
+        assert_eq!(redir.path, temp_path);
     }
 
     #[test]
     fn parse_redirection_with_single_quoted_filename() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output file.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("echo test > 'output file.txt'");
+        let result = parser.parse(&format!("echo test > '{}'", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -980,13 +1000,17 @@ mod tests {
 
         assert!(redirection.is_some());
         let redir = redirection.as_ref().unwrap();
-        assert_eq!(redir.path, PathBuf::from("output file.txt"));
+        assert_eq!(redir.path, temp_path);
     }
 
     #[test]
     fn parse_redirection_with_path() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("echo hello > /tmp/output.txt");
+        let result = parser.parse(&format!("echo hello > {}", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -995,13 +1019,17 @@ mod tests {
 
         assert!(redirection.is_some());
         let redir = redirection.as_ref().unwrap();
-        assert_eq!(redir.path, PathBuf::from("/tmp/output.txt"));
+        assert_eq!(redir.path, temp_path);
     }
 
     #[test]
     fn parse_quoted_command_with_redirection() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("out.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
-        let result = parser.parse("\"echo\" hello > out.txt");
+        let result = parser.parse(&format!("\"echo\" hello > {}", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
@@ -1026,9 +1054,13 @@ mod tests {
 
     #[test]
     fn parse_multiple_words_after_redirection_operator() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
         let parser = InputParser::new(Arc::new(FileManager));
         // Should only take the first word/quoted string as filename
-        let result = parser.parse("echo hello > output.txt extra");
+        let result = parser.parse(&format!("echo hello > {} extra", temp_path_str));
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
