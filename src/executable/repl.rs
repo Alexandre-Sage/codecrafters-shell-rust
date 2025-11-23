@@ -24,6 +24,20 @@ use crate::{
     },
 };
 
+pub struct OutputHandler {
+    file_manager: Arc<FileManager>,
+}
+
+impl OutputHandler {
+    pub fn handle(&self, command_result: CommandResult, redirection: Option<RedirectionContext>) {
+        // match command_result {
+        //     CommandResult::Exit(code) => std::process::exit(code),
+        //     CommandResult::Message(message) => (message.as_str(), ""),
+        //     CommandResult::Stdio(stdou, stderr) => (stdou.as_str(), stderr.as_str()),
+        // };
+    }
+}
+
 pub struct Repl {
     builtins: CommandRegistry,
     input_parser: InputParser,
