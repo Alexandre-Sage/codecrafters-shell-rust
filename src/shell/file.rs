@@ -31,10 +31,18 @@ impl FileManager {
         Ok(path)
     }
 
-    // pub fn parent_is_dir(&self, path: impl Into<PathBuf>) -> Result<PathBuf, CommandError> {
-    //     let path: PathBuf = path.into();
-    //     let parent = path.ancestors().t
-    // }
+    pub fn create_file(&self, path: PathBuf) -> Result<(), CommandError> {
+        std::fs::File::create(path).map_err(|err| CommandError::Unknown(err.to_string()))?;
+        Ok(())
+    }
+
+    pub fn parent_dir_exist(&self, path: &PathBuf) -> Result<(), CommandError> {
+        path.clone()
+            .parent()
+            .ok_or(CommandError::NotADirectory(path.to_owned()))?;
+
+        Ok(())
+    }
 
     pub fn write_to_file(
         &self,
