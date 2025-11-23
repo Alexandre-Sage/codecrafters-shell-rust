@@ -205,3 +205,113 @@ fn append_preserves_file_size_growth() {
     // Cleanup
     fs::remove_file(output_file).ok();
 }
+
+// ========================================================================
+// Integration Tests - Append Stderr Redirection (2>>)
+// ========================================================================
+
+#[test]
+fn append_stderr_to_new_file() {
+    let output_file = "/tmp/test_append_stderr_new.txt";
+    
+    // Clean up
+    fs::remove_file(output_file).ok();
+    
+    // ls on non-existent directory produces stderr
+    test_case("ls /nonexistent_dir_xyz 2>> /tmp/test_append_stderr_new.txt", true);
+    
+    // Check that file was created with stderr
+    assert!(
+        fs::metadata(output_file).is_ok(),
+        "Stderr file should be created with 2>>"
+    );
+    
+    let contents = fs::read_to_string(output_file).unwrap();
+    assert!(
+        !contents.is_empty(),
+        "Stderr should be captured in file"
+    );
+    assert!(
+        contents.contains("nonexistent_dir_xyz") || contents.contains("No such file"),
+        "Error message should mention the missing directory"
+    );
+    
+    // Cleanup
+    fs::remove_file(output_file).ok();
+}
+
+#[test]
+fn append_stderr_to_existing_file() {
+    let output_file = "/tmp/test_append_stderr_existing.txt";
+    
+    // Create file with initial content
+    fs::write(output_file, "=== Previous Error ===\n").unwrap();
+    
+    test_case("ls /another_nonexistent 2>> /tmp/test_append_stderr_existing.txt", true);
+    
+    let contents = fs::read_to_string(output_file).unwrap();
+    assert!(
+        contents.contains("=== Previous Error ==="),
+        "Original content should be preserved"
+    );
+    assert!(
+        contents.contains("another_nonexistent") || contents.contains("No such file"),
+        "New stderr should be appended"
+    );
+    
+    // Cleanup
+    fs::remove_file(output_file).ok();
+}
+
+#[test]
+fn append_stderr_multiple_times() {
+    let output_file = "/tmp/test_append_stderr_multiple.txt";
+    
+    // Clean up
+    fs::remove_file(output_file).ok();
+    
+    test_case("ls /err1 2>> /tmp/test_append_stderr_multiple.txt", true);
+    test_case("ls /err2 2>> /tmp/test_append_stderr_multiple.txt", true);
+    test_case("ls /err3 2>> /tmp/test_append_stderr_multiple.txt", true);
+    
+    let contents = fs::read_to_string(output_file).unwrap();
+    
+    // All three errors should be present
+    let has_all = (contents.contains("err1") || contents.matches("No such file").count() >= 1)
+        && (contents.contains("err2") || contents.matches("No such file").count() >= 2)
+        && (contents.contains("err3") || contents.matches("No such file").count() >= 3);
+    
+    assert!(has_all, "All three stderr outputs should be appended");
+    
+    // Cleanup
+    fs::remove_file(output_file).ok();
+}
+
+#[test]
+fn append_stderr_vs_overwrite_stderr() {
+    let output_file = "/tmp/test_append_vs_overwrite_stderr.txt";
+    
+    // Clean up
+    fs::remove_file(output_file).ok();
+    
+    // First append
+    test_case("ls /error1 2>> /tmp/test_append_vs_overwrite_stderr.txt", true);
+    
+    // Then overwrite with 2>
+    test_case("ls /error2 2> /tmp/test_append_vs_overwrite_stderr.txt", true);
+    
+    let contents = fs::read_to_string(output_file).unwrap();
+    
+    // Should only have error2, not error1 (because 2> overwrites)
+    assert!(
+        !contents.contains("error1"),
+        "First error should be overwritten"
+    );
+    assert!(
+        contents.contains("error2") || contents.contains("No such file"),
+        "Second error should be present"
+    );
+    
+    // Cleanup
+    fs::remove_file(output_file).ok();
+}

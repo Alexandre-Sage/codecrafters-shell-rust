@@ -21,6 +21,7 @@ impl TryFrom<&str> for RedirectionType {
             ">" | "1>" => Ok(Self::WriteOutput(RedirectionChannel::Stdout)),
             "2>" => Ok(Self::WriteOutput(RedirectionChannel::Stderr)),
             ">>" | "1>>" => Ok(Self::AppendOutput(RedirectionChannel::Stdout)),
+            "2>>" => Ok(Self::AppendOutput(RedirectionChannel::Stderr)),
             _ => Err(CommandError::Unknown("No redirection".to_owned())),
         }
     }
@@ -58,6 +59,13 @@ impl RedirectionContext {
         matches!(
             self.redirection_type,
             RedirectionType::AppendOutput(RedirectionChannel::Stdout)
+        )
+    }
+
+    pub fn should_append_stderr(&self) -> bool {
+        matches!(
+            self.redirection_type,
+            RedirectionType::AppendOutput(RedirectionChannel::Stderr)
         )
     }
 }

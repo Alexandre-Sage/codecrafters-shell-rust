@@ -1189,6 +1189,85 @@ mod tests {
     }
 
     // ========================================================================
+    // Append Stderr Redirection Tests (2>>)
+    // ========================================================================
+
+    #[test]
+    fn parse_simple_append_stderr_redirection() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("errors.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        let result = parser.parse(&format!("ls /tmp 2>> {}", temp_path_str));
+
+        assert!(result.is_ok());
+        let (parsed, redirection) = result.unwrap();
+        assert_eq!(parsed.command(), "ls");
+        assert_eq!(parsed.args(), &["/tmp"]);
+
+        // Check append stderr redirection was detected
+        assert!(redirection.is_some());
+        let redir = redirection.as_ref().unwrap();
+        assert_eq!(redir.path, temp_path);
+        assert_eq!(
+            redir.redirection_type,
+            RedirectionType::AppendOutput(redirection_context::RedirectionChannel::Stderr)
+        );
+        assert!(redir.should_append_stderr());
+    }
+
+    #[test]
+    fn parse_append_stderr_vs_append_stdout() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path_stdout = temp_dir.path().join("stdout.txt");
+        let temp_path_stderr = temp_dir.path().join("stderr.txt");
+        let temp_path_stdout_str = temp_path_stdout.to_str().unwrap();
+        let temp_path_stderr_str = temp_path_stderr.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        
+        // Parse append stdout
+        let result_stdout = parser.parse(&format!("echo test >> {}", temp_path_stdout_str));
+        assert!(result_stdout.is_ok());
+        let (_, redir_stdout) = result_stdout.unwrap();
+        
+        // Parse append stderr
+        let result_stderr = parser.parse(&format!("echo test 2>> {}", temp_path_stderr_str));
+        assert!(result_stderr.is_ok());
+        let (_, redir_stderr) = result_stderr.unwrap();
+
+        // Verify they redirect to different channels
+        assert!(redir_stdout.as_ref().unwrap().should_append_stdout());
+        assert!(redir_stderr.as_ref().unwrap().should_append_stderr());
+        assert_ne!(
+            redir_stdout.unwrap().redirection_type,
+            redir_stderr.unwrap().redirection_type,
+            "Append stdout (>>) and append stderr (2>>) should be different"
+        );
+    }
+
+    #[test]
+    fn parse_append_stderr_with_spaces() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("errors.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        let result = parser.parse(&format!("cat file   2>>   {}", temp_path_str));
+
+        assert!(result.is_ok());
+        let (parsed, redirection) = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["file"]);
+
+        assert!(redirection.is_some());
+        let redir = redirection.as_ref().unwrap();
+        assert_eq!(redir.path, temp_path);
+        assert!(redir.should_append_stderr());
+    }
+
+    // ========================================================================
     // Edge Case Tests - Redirection Errors
     // ========================================================================
 
