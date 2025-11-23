@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     commands::CommandToken,
-    exceptions::{application::ApplicationError, commands::CommandError},
+    exceptions::commands::CommandError,
     port::{
         command::{Command, CommandResult},
         shell_component::ShellComponent,

@@ -15,8 +15,8 @@ use crate::{
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::{
         file::FileManager,
-        input_parser::{redirection_context::RedirectionContext, InputParser},
-        output_handler::{self, OutputHandler},
+        input_parser::InputParser,
+        output_handler::OutputHandler,
         path::Path,
     },
 };

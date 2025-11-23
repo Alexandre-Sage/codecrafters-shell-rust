@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    exceptions::{application::ApplicationError, commands::CommandError},
+    exceptions::commands::CommandError,
     port::command::CommandResult,
     shell::input_parser::ParsedCommand,
 };
