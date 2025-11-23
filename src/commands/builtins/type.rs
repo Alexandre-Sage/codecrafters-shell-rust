@@ -71,7 +71,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("echo is a shell builtin".to_string())
+            CommandResult::Message("echo is a shell builtin\n".to_string())
         )
     }
 
@@ -82,7 +82,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("exit is a shell builtin".to_string())
+            CommandResult::Message("exit is a shell builtin\n".to_string())
         )
     }
 
@@ -93,7 +93,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("type is a shell builtin".to_string())
+            CommandResult::Message("type is a shell builtin\n".to_string())
         )
     }
 
@@ -211,7 +211,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("echo is a shell builtin".to_string())
+            CommandResult::Message("echo is a shell builtin\n".to_string())
         );
     }
 
