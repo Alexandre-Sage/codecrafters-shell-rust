@@ -22,7 +22,7 @@ impl TryFrom<&str> for RedirectionType {
             "2>" => Ok(Self::WriteOutput(RedirectionChannel::Stderr)),
             ">>" | "1>>" => Ok(Self::AppendOutput(RedirectionChannel::Stdout)),
             "2>>" => Ok(Self::AppendOutput(RedirectionChannel::Stderr)),
-            _ => Err(CommandError::Unknown("No redirection".to_owned())),
+            _ => Err(CommandError::Uncontroled("No redirection".to_owned())),
         }
     }
 }

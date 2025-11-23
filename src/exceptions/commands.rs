@@ -15,7 +15,7 @@ pub enum CommandError {
     #[error("{0}")]
     ExternalError(String),
     #[error("{0}")]
-    Unknown(String),
+    Uncontroled(String),
     #[error("{0}: No such file or directory")]
     DirectoryNotFound(PathBuf),
     #[error("{0}: is not a directory")]

@@ -20,7 +20,7 @@ impl Cd {
         dir: PathBuf,
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
-        std::env::set_current_dir(dir).map_err(|err| CommandError::Unknown(err.to_string()))?;
+        std::env::set_current_dir(dir).map_err(|err| CommandError::Uncontroled(err.to_string()))?;
 
         Ok(CommandResult::Empty)
     }

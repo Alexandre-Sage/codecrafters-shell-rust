@@ -159,7 +159,7 @@ impl InputParser {
         });
         if let Some((pos, redirection)) = maybe_redirection {
             if pos + 1 >= args.len() {
-                return Err(CommandError::Unknown(
+                return Err(CommandError::Uncontroled(
                     "Missing filename after redirection operator".to_string(),
                 ));
             }
@@ -1226,12 +1226,12 @@ mod tests {
         let temp_path_stderr_str = temp_path_stderr.to_str().unwrap();
 
         let parser = InputParser::new(Arc::new(FileManager));
-        
+
         // Parse append stdout
         let result_stdout = parser.parse(&format!("echo test >> {}", temp_path_stdout_str));
         assert!(result_stdout.is_ok());
         let (_, redir_stdout) = result_stdout.unwrap();
-        
+
         // Parse append stderr
         let result_stderr = parser.parse(&format!("echo test 2>> {}", temp_path_stderr_str));
         assert!(result_stderr.is_ok());
@@ -1279,7 +1279,7 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            matches!(err, CommandError::Unknown(_)),
+            matches!(err, CommandError::Uncontroled(_)),
             "Expected Unknown error for missing filename after >"
         );
     }

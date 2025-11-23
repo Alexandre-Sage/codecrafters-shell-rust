@@ -32,7 +32,7 @@ impl FileManager {
     }
 
     pub fn create_file(&self, path: &PathBuf) -> Result<(), CommandError> {
-        std::fs::File::create(path).map_err(|err| CommandError::Unknown(err.to_string()))?;
+        std::fs::File::create(path).map_err(|err| CommandError::Uncontroled(err.to_string()))?;
         Ok(())
     }
 
@@ -55,7 +55,7 @@ impl FileManager {
         path: &PathBuf,
         buffer: impl AsRef<[u8]>,
     ) -> Result<(), CommandError> {
-        std::fs::write(path, buffer).map_err(|err| CommandError::Unknown(err.to_string()))
+        std::fs::write(path, buffer).map_err(|err| CommandError::Uncontroled(err.to_string()))
     }
 
     pub fn append_to_file(
@@ -68,6 +68,6 @@ impl FileManager {
             .create(true)
             .open(path)
             .and_then(|mut file| file.write_all(buffer.as_ref()))
-            .map_err(|err| CommandError::Unknown(err.to_string()))
+            .map_err(|err| CommandError::Uncontroled(err.to_string()))
     }
 }

@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use std::io::{self, Write};
 use std::sync::Arc;
 
@@ -14,24 +13,25 @@ use crate::{
     external::ExternalCommand,
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::{
-        file::FileManager,
-        input_parser::InputParser,
-        output_handler::OutputHandler,
-        path::Path,
+        file::FileManager, input_parser::InputParser, output_handler::OutputHandler, path::Path,
     },
 };
+
+const TABULATION: &str = "\t";
+struct CompletionHandler;
 
 pub struct Repl {
     builtins: CommandRegistry,
     input_parser: InputParser,
     output_handler: Arc<OutputHandler>,
-    file_manager: Arc<FileManager>,
+    // file_manager: Arc<FileManager>,
 }
 
 impl Repl {
     pub fn new(file_manager: Arc<FileManager>, output_handler: Arc<OutputHandler>) -> Self {
         let path_dirs = Arc::new(Path::from_env());
         let external_command = Arc::new(ExternalCommand::new(Arc::clone(&path_dirs)));
+
         let mut registry = CommandRegistry::new(Arc::clone(&path_dirs), external_command);
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
@@ -49,7 +49,7 @@ impl Repl {
             builtins: registry,
             input_parser: InputParser::new(Arc::clone(&file_manager)),
             output_handler,
-            file_manager,
+            // file_manager,
         }
     }
 
@@ -62,21 +62,15 @@ impl Repl {
     pub fn spawn(&self) -> Result<(), CommandError> {
         loop {
             self.prompt()
-                .map_err(|err| CommandError::Unknown(err.to_string()))?;
+                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
 
             let mut buffer = String::new();
 
             io::stdin()
                 .read_line(&mut buffer)
-                .map_err(|err| CommandError::Unknown(err.to_string()))?;
+                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
 
-            let (parsed_command, redirection) = match self.input_parser.parse(buffer.trim()) {
-                Ok(cmd) => cmd,
-                Err(err) => {
-                    eprintln!("{err}");
-                    continue;
-                }
-            };
+            let (parsed_command, redirection) = self.input_parser.parse(buffer.trim())?;
 
             let command = self.builtins.execute(parsed_command);
             match command {
@@ -88,10 +82,10 @@ impl Repl {
 
             io::stderr()
                 .flush()
-                .map_err(|err| CommandError::Unknown(err.to_string()))?;
+                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
             io::stdout()
                 .flush()
-                .map_err(|err| CommandError::Unknown(err.to_string()))?;
+                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
         }
     }
 }

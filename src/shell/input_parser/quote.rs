@@ -15,7 +15,7 @@ impl TryFrom<char> for QuoteType {
         match value {
             SINGLE_QUOTE => Ok(Self::Single),
             DOUBLE_QUOTE => Ok(Self::Double),
-            _ => Err(CommandError::Unknown("Not a quote".to_owned())),
+            _ => Err(CommandError::Uncontroled("Not a quote".to_owned())),
         }
     }
 }
