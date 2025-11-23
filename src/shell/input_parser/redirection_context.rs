@@ -1,6 +1,6 @@
-use std::{i8, path::PathBuf, process::Stdio};
+use std::path::PathBuf;
 
-use crate::{exceptions::commands::CommandError, shell::input_parser::commons::REDIRECT_OUTPUT};
+use crate::exceptions::commands::CommandError;
 
 #[derive(Debug, PartialEq)]
 pub enum RedirectionChannel {

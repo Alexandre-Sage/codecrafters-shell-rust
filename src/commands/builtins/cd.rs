@@ -36,7 +36,7 @@ impl Command for Cd {
             return Err(CommandError::TooManyArguments("1".to_string(), args.len()));
         }
 
-        let path = args.get(0).map_or("", |s| s.as_str());
+        let path = args.first().map_or("", |s| s.as_str());
         let path = self.file_manager.handle_path(path)?;
 
         if !path.is_dir() {

@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     commands::CommandToken,
     exceptions::{application::ApplicationError, commands::CommandError},
-    external::ExternalCommand,
     port::{
         command::{Command, CommandResult},
         shell_component::ShellComponent,

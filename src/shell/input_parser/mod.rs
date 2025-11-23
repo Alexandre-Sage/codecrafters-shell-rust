@@ -13,7 +13,6 @@ use crate::{
             quote::{QuotePosition, QuoteType},
             redirection_context::{RedirectionContext, RedirectionType},
         },
-        redirection,
     },
 };
 

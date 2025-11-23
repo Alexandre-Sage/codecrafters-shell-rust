@@ -16,11 +16,10 @@ use crate::{
     shell::{
         file::FileManager,
         input_parser::{
-            redirection_context::{self, RedirectionChannel, RedirectionContext, RedirectionType},
+            redirection_context::RedirectionContext,
             InputParser,
         },
         path::Path,
-        redirection,
     },
 };
 
