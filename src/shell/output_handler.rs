@@ -25,7 +25,9 @@ impl OutputHandler {
             CommandResult::Stdio(stdout, stderr) => {
                 self.write_output(&stdout, &stderr, redirection)
             }
-            CommandResult::Error(error) => self.write_output("", &error.to_string(), redirection),
+            CommandResult::Error(error) => {
+                self.write_output("", &format!("{}\n", &error.to_string()), redirection)
+            }
             CommandResult::Empty => Ok(()),
         }
     }
