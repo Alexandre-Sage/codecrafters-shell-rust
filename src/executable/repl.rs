@@ -61,11 +61,14 @@ impl Repl {
 
     pub fn spawn(&self) -> Result<(), CommandError> {
         loop {
-            self.prompt().unwrap();
+            self.prompt()
+                .map_err(|err| CommandError::Unknown(err.to_string()))?;
 
             let mut buffer = String::new();
 
-            io::stdin().read_line(&mut buffer).unwrap();
+            io::stdin()
+                .read_line(&mut buffer)
+                .map_err(|err| CommandError::Unknown(err.to_string()))?;
 
             let (parsed_command, redirection) = match self.input_parser.parse(buffer.trim()) {
                 Ok(cmd) => cmd,
