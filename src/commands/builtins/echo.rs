@@ -23,7 +23,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Stdio("hello world\n".to_string(), "".to_owned())
+            CommandResult::stdout("hello world\n")
         )
     }
 
@@ -33,7 +33,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Stdio("\n".to_string(), "".to_owned())
+            CommandResult::stdout("\n")
         )
     }
 }
