@@ -32,10 +32,13 @@ impl Repl {
     pub fn new(file_manager: Arc<FileManager>, output_handler: Arc<OutputHandler>) -> Self {
         let path_dirs = Arc::new(Path::from_env());
         let external_command = Arc::new(ExternalCommand::new(Arc::clone(&path_dirs)));
-        let mut registry = CommandRegistry::new(path_dirs.clone(), external_command);
+        let mut registry = CommandRegistry::new(Arc::clone(&path_dirs), external_command);
         registry.register(CommandToken::Exit, Arc::new(Exit));
         registry.register(CommandToken::Echo, Arc::new(Echo));
-        registry.register(CommandToken::Type, Arc::new(Type::new(path_dirs.clone())));
+        registry.register(
+            CommandToken::Type,
+            Arc::new(Type::new(Arc::clone(&path_dirs))),
+        );
         registry.register(CommandToken::Pwd, Arc::new(Pwd));
         registry.register(
             CommandToken::Cd,

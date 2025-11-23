@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 use crate::exceptions::commands::CommandError;
 
@@ -31,14 +31,20 @@ impl FileManager {
         Ok(path)
     }
 
-    pub fn create_file(&self, path: PathBuf) -> Result<(), CommandError> {
+    pub fn create_file(&self, path: &PathBuf) -> Result<(), CommandError> {
         std::fs::File::create(path).map_err(|err| CommandError::Unknown(err.to_string()))?;
         Ok(())
     }
 
+    pub fn create_file_if_no_exist(&self, path: &PathBuf) -> Result<(), CommandError> {
+        if !path.exists() {
+            return self.create_file(&path);
+        }
+        Ok(())
+    }
+
     pub fn parent_dir_exist(&self, path: &PathBuf) -> Result<(), CommandError> {
-        path.clone()
-            .parent()
+        path.parent()
             .ok_or(CommandError::NotADirectory(path.to_owned()))?;
 
         Ok(())
@@ -50,5 +56,18 @@ impl FileManager {
         buffer: impl AsRef<[u8]>,
     ) -> Result<(), CommandError> {
         std::fs::write(path, buffer).map_err(|err| CommandError::Unknown(err.to_string()))
+    }
+
+    pub fn append_to_file(
+        &self,
+        path: &PathBuf,
+        buffer: impl AsRef<[u8]>,
+    ) -> Result<(), CommandError> {
+        std::fs::File::options()
+            .append(true)
+            .create(true)
+            .open(path)
+            .and_then(|mut file| file.write_all(buffer.as_ref()))
+            .map_err(|err| CommandError::Unknown(err.to_string()))
     }
 }

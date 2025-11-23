@@ -11,6 +11,7 @@ pub enum RedirectionChannel {
 #[derive(Debug, PartialEq)]
 pub enum RedirectionType {
     WriteOutput(RedirectionChannel),
+    AppendOutput(RedirectionChannel),
 }
 
 impl TryFrom<&str> for RedirectionType {
@@ -19,6 +20,7 @@ impl TryFrom<&str> for RedirectionType {
         match value {
             ">" | "1>" => Ok(Self::WriteOutput(RedirectionChannel::Stdout)),
             "2>" => Ok(Self::WriteOutput(RedirectionChannel::Stderr)),
+            ">>" | "1>>" => Ok(Self::AppendOutput(RedirectionChannel::Stdout)),
             _ => Err(CommandError::Unknown("No redirection".to_owned())),
         }
     }
@@ -49,6 +51,13 @@ impl RedirectionContext {
         matches!(
             self.redirection_type,
             RedirectionType::WriteOutput(RedirectionChannel::Stdout)
+        )
+    }
+
+    pub fn should_append_stdout(&self) -> bool {
+        matches!(
+            self.redirection_type,
+            RedirectionType::AppendOutput(RedirectionChannel::Stdout)
         )
     }
 }

@@ -166,9 +166,10 @@ impl InputParser {
 
             let parts: Vec<_> = args.drain(pos..pos + 2).collect();
             let path = PathBuf::from(&parts[1]);
-            // std::fs::write(&path, &[]).expect("Quick fix");
+
             self.file_manager.parent_dir_exist(&path)?;
-            self.file_manager.create_file(path.clone())?;
+            self.file_manager.create_file_if_no_exist(&path)?;
+
             let redirection = RedirectionContext::new(path, redirection);
 
             return Ok(Some(redirection));
@@ -194,6 +195,8 @@ impl InputParser {
 
 #[cfg(test)]
 mod tests {
+    use crate::shell::input_parser::redirection_context::RedirectionChannel;
+
     use super::*;
 
     // ========================================================================
@@ -1040,14 +1043,12 @@ mod tests {
     #[test]
     fn parse_redirection_in_middle_is_not_detected() {
         let parser = InputParser::new(Arc::new(FileManager));
-        // The > inside quotes should not be treated as redirection
         let result = parser.parse("echo 'hello > world' test");
 
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
         assert_eq!(parsed.command(), "echo");
         assert_eq!(parsed.args(), &["hello > world", "test"]);
-        // > is inside quotes, so no redirection
         assert!(redirection.is_none());
     }
 
@@ -1064,10 +1065,127 @@ mod tests {
         assert!(result.is_ok());
         let (parsed, redirection) = result.unwrap();
         assert_eq!(parsed.command(), "echo");
-        // "extra" should probably cause an error or be ignored
-        // For now, we expect it in args
         assert!(parsed.args().contains(&"hello".to_string()));
         assert!(redirection.is_some());
+    }
+
+    // ========================================================================
+    // Append Redirection Tests (>>)
+    // ========================================================================
+
+    #[test]
+    fn parse_simple_append_redirection() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        let result = parser.parse(&format!("echo hello >> {}", temp_path_str));
+
+        assert!(result.is_ok());
+        let (parsed, redirection) = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello"]);
+
+        // Check append redirection was detected
+        assert!(redirection.is_some());
+        let redir = redirection.as_ref().unwrap();
+        assert_eq!(redir.path, temp_path);
+        assert_eq!(
+            redir.redirection_type,
+            RedirectionType::AppendOutput(redirection_context::RedirectionChannel::Stdout)
+        );
+    }
+
+    #[test]
+    fn parse_append_vs_write_redirection() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path_write = temp_dir.path().join("write.txt");
+        let temp_path_append = temp_dir.path().join("append.txt");
+        let temp_path_write_str = temp_path_write.to_str().unwrap();
+        let temp_path_append_str = temp_path_append.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+
+        // Parse write redirection
+        let result_write = parser.parse(&format!("echo test > {}", temp_path_write_str));
+        assert!(result_write.is_ok());
+        let (_, redir_write) = result_write.unwrap();
+
+        // Parse append redirection
+        let result_append = parser.parse(&format!("echo test >> {}", temp_path_append_str));
+        assert!(result_append.is_ok());
+        let (_, redir_append) = result_append.unwrap();
+
+        // Verify they are different types
+        assert_ne!(
+            redir_write.unwrap().redirection_type,
+            redir_append.unwrap().redirection_type,
+            "Write (>) and append (>>) should be different redirection types"
+        );
+    }
+
+    #[test]
+    fn parse_append_with_quoted_filename() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("file with spaces.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        let result = parser.parse(&format!("echo test >> \"{}\"", temp_path_str));
+
+        assert!(result.is_ok());
+        let (parsed, redirection) = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["test"]);
+
+        assert!(redirection.is_some());
+        let redir = redirection.as_ref().unwrap();
+        assert_eq!(redir.path, temp_path);
+        assert!(redir.should_append_stdout());
+    }
+
+    #[test]
+    fn parse_append_with_spaces_around_operator() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        let result = parser.parse(&format!("echo hello   >>   {}", temp_path_str));
+
+        assert!(result.is_ok());
+        let (parsed, redirection) = result.unwrap();
+        assert_eq!(parsed.command(), "echo");
+        assert_eq!(parsed.args(), &["hello"]);
+
+        assert!(redirection.is_some());
+        let redir = redirection.as_ref().unwrap();
+        assert_eq!(redir.path, temp_path);
+        assert_eq!(
+            redir.redirection_type,
+            RedirectionType::AppendOutput(RedirectionChannel::Stdout)
+        );
+    }
+
+    #[test]
+    fn parse_append_at_end_of_command() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_path = temp_dir.path().join("output.txt");
+        let temp_path_str = temp_path.to_str().unwrap();
+
+        let parser = InputParser::new(Arc::new(FileManager));
+        let result = parser.parse(&format!("cat file1 file2 >> {}", temp_path_str));
+
+        assert!(result.is_ok());
+        let (parsed, redirection) = result.unwrap();
+        assert_eq!(parsed.command(), "cat");
+        assert_eq!(parsed.args(), &["file1", "file2"]);
+
+        assert!(redirection.is_some());
+        let redir = redirection.as_ref().unwrap();
+        assert_eq!(redir.path, temp_path);
+        assert!(redir.should_append_stdout());
     }
 
     // ========================================================================

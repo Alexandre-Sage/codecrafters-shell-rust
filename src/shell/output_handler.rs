@@ -54,6 +54,11 @@ impl OutputHandler {
                 return self.file_manager.write_to_file(&redirection.path, stdout);
             }
 
+            if redirection.should_append_stdout() {
+                self.write_stderr(stderr);
+                return self.file_manager.append_to_file(&redirection.path, stdout);
+            }
+
             if redirection.should_write_stderr() {
                 self.write_stdout(stdout);
                 return self.file_manager.write_to_file(&redirection.path, stderr);
