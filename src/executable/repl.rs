@@ -15,10 +15,7 @@ use crate::{
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::{
         file::FileManager,
-        input_parser::{
-            redirection_context::RedirectionContext,
-            InputParser,
-        },
+        input_parser::{redirection_context::RedirectionContext, InputParser},
         path::Path,
     },
 };
@@ -28,18 +25,65 @@ pub struct OutputHandler {
 }
 
 impl OutputHandler {
-    pub fn handle(&self, command_result: CommandResult, redirection: Option<RedirectionContext>) {
-        // match command_result {
-        //     CommandResult::Exit(code) => std::process::exit(code),
-        //     CommandResult::Message(message) => (message.as_str(), ""),
-        //     CommandResult::Stdio(stdou, stderr) => (stdou.as_str(), stderr.as_str()),
-        // };
+    pub fn new(file_manager: Arc<FileManager>) -> Self {
+        Self { file_manager }
+    }
+
+    pub fn handle(
+        &self,
+        command_result: CommandResult,
+        redirection: Option<RedirectionContext>,
+    ) -> Result<(), CommandError> {
+        match command_result {
+            CommandResult::Exit(code) => std::process::exit(code),
+            CommandResult::Stdio(stdout, stderr) => {
+                self.write_output(&stdout, &stderr, redirection)
+            }
+            CommandResult::Empty => Ok(()),
+        }
+    }
+
+    fn write_stderr(&self, stderr: &str) {
+        if !stderr.is_empty() {
+            eprint!("{stderr}")
+        }
+    }
+
+    fn write_stdout(&self, stdout: &str) {
+        if !stdout.is_empty() {
+            print!("{stdout}")
+        }
+    }
+
+    fn write_output(
+        &self,
+        stdout: &str,
+        stderr: &str,
+        redirection: Option<RedirectionContext>,
+    ) -> Result<(), CommandError> {
+        if let Some(redirection) = redirection {
+            if redirection.should_write_stdout() {
+                self.write_stderr(stderr);
+                return self.file_manager.write_to_file(&redirection.path, stdout);
+            }
+
+            if redirection.should_write_stderr() {
+                self.write_stdout(stdout);
+                return self.file_manager.write_to_file(&redirection.path, stderr);
+            }
+        }
+
+        self.write_stderr(stderr);
+        self.write_stdout(stdout);
+
+        Ok(())
     }
 }
 
 pub struct Repl {
     builtins: CommandRegistry,
     input_parser: InputParser,
+    output_handler: OutputHandler,
     file_manager: Arc<FileManager>,
 }
 
@@ -61,6 +105,7 @@ impl Repl {
         Self {
             builtins: registry,
             input_parser: InputParser::new(Arc::clone(&file_manager)),
+            output_handler: OutputHandler::new(Arc::clone(&file_manager)),
             file_manager,
         }
     }
@@ -69,51 +114,6 @@ impl Repl {
         print!("$ ");
 
         io::stdout().flush()
-    }
-
-    fn handle_output(
-        &self,
-        command_result: CommandResult,
-        redirection: Option<RedirectionContext>,
-    ) -> Result<(), CommandError> {
-        match command_result {
-            CommandResult::Exit(code) => {
-                std::process::exit(code);
-            }
-            CommandResult::Message(message) => {
-                if let Some(redirection_context) = redirection {
-                    if redirection_context.redirection_type.should_write_stdout() {
-                        return self
-                            .file_manager
-                            .write_to_file(&redirection_context.path, message);
-                    }
-                }
-                print!("{message}")
-            }
-            CommandResult::Stdio(stdout, stderr) => {
-                if let Some(redirection_context) = redirection {
-                    if redirection_context.redirection_type.should_write_stdout() {
-                        eprint!("{stderr}");
-                        return self
-                            .file_manager
-                            .write_to_file(&redirection_context.path, stdout);
-                    }
-
-                    if redirection_context.redirection_type.should_write_stderr() {
-                        print!("{stdout}");
-                        return self
-                            .file_manager
-                            .write_to_file(&redirection_context.path, stderr);
-                    }
-                }
-                print!("{stdout}");
-                eprint!("{stderr}");
-            }
-            CommandResult::Empty => {
-                // Command executed successfully with no output (like cd)
-            }
-        };
-        Ok(())
     }
 
     pub fn spawn(&self) -> Result<(), CommandError> {
@@ -136,7 +136,7 @@ impl Repl {
             match command {
                 Err(err) => {
                     if let Some(redirection_context) = redirection {
-                        if redirection_context.redirection_type.should_write_stderr() {
+                        if redirection_context.should_write_stderr() {
                             return self
                                 .file_manager
                                 .write_to_file(&redirection_context.path, err.to_string());
@@ -145,7 +145,7 @@ impl Repl {
                         eprintln!("{err}");
                     }
                 }
-                Ok(res) => self.handle_output(res, redirection)?,
+                Ok(res) => self.output_handler.handle(res, redirection)?,
             };
 
             io::stderr()

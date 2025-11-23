@@ -8,7 +8,7 @@ impl Command for Echo {
         args: &[String],
     ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
     {
-        Ok(CommandResult::Stdio(args.join(" ") + "\n", "".to_owned()))
+        Ok(CommandResult::stdout(format!("{}\n", args.join(" "))))
     }
 }
 #[cfg(test)]

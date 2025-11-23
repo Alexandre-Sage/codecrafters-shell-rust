@@ -13,22 +13,6 @@ pub enum RedirectionType {
     WriteOutput(RedirectionChannel),
 }
 
-impl RedirectionType {
-    pub fn should_write_stderr(&self) -> bool {
-        matches!(
-            self,
-            RedirectionType::WriteOutput(RedirectionChannel::Stderr)
-        )
-    }
-
-    pub fn should_write_stdout(&self) -> bool {
-        matches!(
-            self,
-            RedirectionType::WriteOutput(RedirectionChannel::Stdout)
-        )
-    }
-}
-
 impl TryFrom<&str> for RedirectionType {
     type Error = CommandError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -52,5 +36,19 @@ impl RedirectionContext {
             path,
             redirection_type,
         }
+    }
+
+    pub fn should_write_stderr(&self) -> bool {
+        matches!(
+            self.redirection_type,
+            RedirectionType::WriteOutput(RedirectionChannel::Stderr)
+        )
+    }
+
+    pub fn should_write_stdout(&self) -> bool {
+        matches!(
+            self.redirection_type,
+            RedirectionType::WriteOutput(RedirectionChannel::Stdout)
+        )
     }
 }

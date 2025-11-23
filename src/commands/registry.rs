@@ -51,7 +51,7 @@ impl ShellComponent for CommandRegistry {
 }
 #[cfg(test)]
 mod tests {
-    use crate::port::command::CommandResult;
+    use crate::{external::ExternalCommand, port::command::CommandResult};
 
     use super::*;
 

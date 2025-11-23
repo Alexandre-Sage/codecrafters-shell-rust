@@ -3,9 +3,18 @@ use crate::exceptions::commands::CommandError;
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum CommandResult {
     Exit(i32),
-    Message(String),
     Stdio(String, String),
     Empty,
+}
+
+impl CommandResult {
+    pub fn stdout(buffer: impl Into<String>) -> Self {
+        Self::Stdio(buffer.into(), String::new())
+    }
+
+    pub fn stderr(buffer: impl Into<String>) -> Self {
+        Self::Stdio(String::new(), buffer.into())
+    }
 }
 
 pub(crate) trait Command {

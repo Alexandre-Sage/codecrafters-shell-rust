@@ -36,15 +36,15 @@ impl Command for Type {
         let arg = &args[0];
 
         if CommandToken::from_str(arg).is_ok() {
-            return Ok(CommandResult::Message(
+            return Ok(CommandResult::stdout(
                 arg.to_owned() + " is a shell builtin\n",
             ));
         }
 
         match self.path_dirs.find_executable(arg) {
-            Some(exe_path) => Ok(CommandResult::Message(format!(
+            Some(exe_path) => Ok(CommandResult::stdout(format!(
                 "{arg} is {}\n",
-                exe_path.display()
+                exe_path.display(),
             ))),
             None => Err(TypeCommandError::NotFound(arg.to_string()).into()),
         }
@@ -71,7 +71,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("echo is a shell builtin\n".to_string())
+            CommandResult::Stdio(
+                "echo is a shell builtin\n".to_string(),
+                String::with_capacity(0)
+            )
         )
     }
 
@@ -82,7 +85,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("exit is a shell builtin\n".to_string())
+            CommandResult::Stdio(
+                "exit is a shell builtin\n".to_string(),
+                String::with_capacity(0)
+            )
         )
     }
 
@@ -93,7 +99,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("type is a shell builtin\n".to_string())
+            CommandResult::Stdio(
+                "type is a shell builtin\n".to_string(),
+                String::with_capacity(0)
+            )
         )
     }
 
@@ -154,7 +163,7 @@ mod tests {
         // ls should be found in PATH (exists on most Unix systems)
         assert!(result.is_ok());
         let msg = result.unwrap();
-        if let CommandResult::Message(s) = msg {
+        if let CommandResult::Stdio(s, _) = msg {
             assert!(s.starts_with("ls is "));
             assert!(s.contains("/ls"));
         } else {
@@ -169,7 +178,7 @@ mod tests {
 
         assert!(result.is_ok());
         let msg = result.unwrap();
-        if let CommandResult::Message(s) = msg {
+        if let CommandResult::Stdio(s, _) = msg {
             assert!(s.starts_with("cat is "));
             assert!(s.contains("/cat"));
         } else {
@@ -211,7 +220,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            CommandResult::Message("echo is a shell builtin\n".to_string())
+            CommandResult::Stdio(
+                "echo is a shell builtin\n".to_string(),
+                String::with_capacity(0)
+            )
         );
     }
 
