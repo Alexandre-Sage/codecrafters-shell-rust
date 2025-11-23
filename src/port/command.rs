@@ -5,6 +5,7 @@ pub(crate) enum CommandResult {
     Exit(i32),
     Stdio(String, String),
     Empty,
+    Error(CommandError),
 }
 
 impl CommandResult {

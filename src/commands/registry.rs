@@ -39,7 +39,7 @@ impl CommandRegistry {
 }
 
 impl ShellComponent for CommandRegistry {
-    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, ApplicationError> {
+    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, CommandError> {
         let command = self.try_get(command)?;
         let result = command.execute(args)?;
 
