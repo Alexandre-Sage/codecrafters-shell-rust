@@ -37,7 +37,7 @@ impl Command for Type {
 
         if CommandToken::from_str(arg).is_ok() {
             return Ok(CommandResult::stdout(
-                arg.to_owned() + " is a shell builtin\n",
+                format!("{} is a shell builtin\n", arg),
             ));
         }
 
