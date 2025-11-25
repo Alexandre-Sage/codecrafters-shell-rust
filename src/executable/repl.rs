@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
+use crate::shell::completion::builtins::BuiltinsCompletion;
 use crate::shell::input::input_handler::InputHandler;
 use crate::shell::raw_mode::RawMode;
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::{
         file::FileManager, input::input_parser::InputParser, output_handler::OutputHandler,
-        path::Path,
+        path::PathDirs,
     },
 };
 
@@ -25,12 +26,13 @@ pub struct Repl {
     builtins: CommandRegistry,
     input_parser: InputParser,
     output_handler: Arc<OutputHandler>,
+    input_handler: InputHandler,
     // file_manager: Arc<FileManager>,
 }
 
 impl Repl {
     pub fn new(file_manager: Arc<FileManager>, output_handler: Arc<OutputHandler>) -> Self {
-        let path_dirs = Arc::new(Path::from_env());
+        let path_dirs = Arc::new(PathDirs::from_env());
         let external_command = Arc::new(ExternalCommand::new(Arc::clone(&path_dirs)));
 
         let mut registry = CommandRegistry::new(Arc::clone(&path_dirs), external_command);
@@ -46,11 +48,13 @@ impl Repl {
             Arc::new(Cd::new(Arc::clone(&file_manager))),
         );
 
+        let completions = BuiltinsCompletion::new(Arc::clone(&path_dirs));
+
         Self {
             builtins: registry,
             input_parser: InputParser::new(Arc::clone(&file_manager)),
             output_handler,
-            // file_manager,
+            input_handler: InputHandler::new(completions), // file_manager,
         }
     }
 
@@ -61,11 +65,10 @@ impl Repl {
     }
 
     pub fn spawn(&self) -> Result<(), ShellError> {
-        let input_handler = InputHandler::new();
         loop {
             self.prompt()
                 .map_err(|err| ShellError::Uncontroled(err.to_string()))?;
-            let buffer = input_handler.handle()?;
+            let buffer = self.input_handler.handle()?;
 
             match buffer {
                 Some(buffer) => {

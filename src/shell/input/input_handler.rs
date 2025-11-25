@@ -3,7 +3,7 @@ use std::io::{self, Read, Write};
 use crate::{
     exceptions::commands::ShellError,
     shell::{
-        completion::builtins::BuiltinsCompletion,
+        completion::{self, builtins::BuiltinsCompletion, CompletionComponent},
         input::commons::{
             BACK_SPACE, BELL_CHAR, CARRIAGE, CRLF, CTRL_C, CTRL_H, LINEBREAK, TABULATION,
         },
@@ -16,10 +16,8 @@ pub(crate) struct InputHandler {
 }
 
 impl InputHandler {
-    pub(crate) fn new() -> Self {
-        Self {
-            completion: BuiltinsCompletion::new(),
-        }
+    pub(crate) fn new(completion: BuiltinsCompletion) -> Self {
+        Self { completion }
     }
 
     pub(crate) fn handle(&self) -> Result<Option<String>, ShellError> {
@@ -37,7 +35,7 @@ impl InputHandler {
 
             match tmp_buffer[0] {
                 TABULATION => {
-                    let completion = self.completion.complete(&buffer);
+                    let completion = self.completion.execute(&buffer);
                     match completion {
                         Some(completion_item) => {
                             let completion_item = format!("{completion_item} ");
@@ -124,11 +122,19 @@ enum ProcessResult {
 
 #[cfg(test)]
 mod tests {
+    use crate::shell::path::PathDirs;
+
     use super::*;
+
+    fn setup() -> InputHandler {
+        let path = PathDirs::from_env();
+        let completion = BuiltinsCompletion::new(path.into());
+        InputHandler::new(completion)
+    }
 
     #[test]
     fn process_printable_characters() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::new();
 
         assert_eq!(
@@ -146,7 +152,7 @@ mod tests {
 
     #[test]
     fn process_backspace_removes_character() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::from("hello");
 
         assert_eq!(
@@ -164,7 +170,7 @@ mod tests {
 
     #[test]
     fn process_backspace_on_empty_buffer_does_nothing() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::new();
 
         assert_eq!(
@@ -176,7 +182,7 @@ mod tests {
 
     #[test]
     fn process_tab_completes_unambiguous_command() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::from("ec");
 
         assert_eq!(
@@ -188,7 +194,7 @@ mod tests {
 
     #[test]
     fn process_tab_with_ambiguous_prefix_does_nothing() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::from("e");
 
         assert_eq!(
@@ -200,7 +206,7 @@ mod tests {
 
     #[test]
     fn process_tab_with_no_match_does_nothing() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::from("xyz");
 
         assert_eq!(
@@ -212,7 +218,7 @@ mod tests {
 
     #[test]
     fn process_enter_submits_input() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::from("echo test");
 
         assert_eq!(
@@ -231,7 +237,7 @@ mod tests {
 
     #[test]
     fn process_ctrl_c_interrupts() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::from("some input");
 
         assert_eq!(
@@ -243,7 +249,7 @@ mod tests {
 
     #[test]
     fn process_control_characters_are_ignored() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::new();
 
         // Control characters < 32 (except handled ones)
@@ -266,7 +272,7 @@ mod tests {
 
     #[test]
     fn process_full_command_input_sequence() {
-        let handler = InputHandler::new();
+        let handler = setup();
         let mut buffer = String::new();
 
         // Type "ec"

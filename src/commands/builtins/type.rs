@@ -7,15 +7,15 @@ use crate::{
         type_command_error::TypeCommandError,
     },
     port::command::{Command, CommandResult},
-    shell::path::Path,
+    shell::path::PathDirs,
 };
 
 pub struct Type {
-    path_dirs: Arc<Path>,
+    path_dirs: Arc<PathDirs>,
 }
 
 impl Type {
-    pub fn new(path_dirs: Arc<Path>) -> Self {
+    pub fn new(path_dirs: Arc<PathDirs>) -> Self {
         Self { path_dirs }
     }
 }
@@ -58,8 +58,8 @@ mod tests {
 
     use super::*;
 
-    fn create_empty_path() -> Arc<Path> {
-        Arc::new(Path::new(vec![]))
+    fn create_empty_path() -> Arc<PathDirs> {
+        Arc::new(PathDirs::new(vec![]))
     }
 
     // Builtin command tests
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn type_finds_ls_in_system_path() {
         // Use actual system PATH
-        let paths = Arc::new(Path::from_env());
+        let paths = Arc::new(PathDirs::from_env());
         let result = Type::new(paths).execute(&["ls".to_string()]);
 
         // ls should be found in PATH (exists on most Unix systems)
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn type_finds_cat_in_system_path() {
-        let paths = Arc::new(Path::from_env());
+        let paths = Arc::new(PathDirs::from_env());
         let result = Type::new(paths).execute(&["cat".to_string()]);
 
         assert!(result.is_ok());
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn type_nonexistent_external_command() {
-        let paths = Arc::new(Path::from_env());
+        let paths = Arc::new(PathDirs::from_env());
         let result = Type::new(paths).execute(&["thisdoesnotexist12345".to_string()]);
 
         assert!(result.is_err());
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn type_with_specific_paths() {
-        let paths = Arc::new(Path::new(vec![
+        let paths = Arc::new(PathDirs::new(vec![
             PathBuf::from("/usr/bin"),
             PathBuf::from("/bin"),
         ]));
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn type_builtin_takes_precedence_over_external() {
-        let paths = Arc::new(Path::from_env());
+        let paths = Arc::new(PathDirs::from_env());
         let result = Type::new(paths).execute(&["echo".to_string()]);
 
         assert!(result.is_ok());

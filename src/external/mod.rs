@@ -3,15 +3,15 @@ use std::sync::Arc;
 use crate::{
     exceptions::commands::ShellError,
     port::{command::CommandResult, shell_component::ShellComponent},
-    shell::path::Path,
+    shell::path::PathDirs,
 };
 
 pub struct ExternalCommand {
-    path_dirs: Arc<Path>,
+    path_dirs: Arc<PathDirs>,
 }
 
 impl ExternalCommand {
-    pub fn new(path_dirs: Arc<Path>) -> Self {
+    pub fn new(path_dirs: Arc<PathDirs>) -> Self {
         Self { path_dirs }
     }
 }
