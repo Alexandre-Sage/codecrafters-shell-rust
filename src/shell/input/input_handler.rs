@@ -38,6 +38,7 @@ impl InputHandler {
                     let completion = self.completion.complete(&buffer);
                     if let Some(completion_item) = completion {
                         buffer.push_str(&completion_item);
+                        buffer.push(' ');
                         self.write_output(&mut stdout, completion_item.as_bytes())?;
                     }
                 }
@@ -123,10 +124,16 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::new();
 
-        assert_eq!(handler.process_byte(b'h', &mut buffer), ProcessResult::Echo('h'));
+        assert_eq!(
+            handler.process_byte(b'h', &mut buffer),
+            ProcessResult::Echo('h')
+        );
         assert_eq!(buffer, "h");
 
-        assert_eq!(handler.process_byte(b'i', &mut buffer), ProcessResult::Echo('i'));
+        assert_eq!(
+            handler.process_byte(b'i', &mut buffer),
+            ProcessResult::Echo('i')
+        );
         assert_eq!(buffer, "hi");
     }
 
@@ -135,10 +142,16 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::from("hello");
 
-        assert_eq!(handler.process_byte(BACK_SPACE, &mut buffer), ProcessResult::Backspace);
+        assert_eq!(
+            handler.process_byte(BACK_SPACE, &mut buffer),
+            ProcessResult::Backspace
+        );
         assert_eq!(buffer, "hell");
 
-        assert_eq!(handler.process_byte(CTRL_H, &mut buffer), ProcessResult::Backspace);
+        assert_eq!(
+            handler.process_byte(CTRL_H, &mut buffer),
+            ProcessResult::Backspace
+        );
         assert_eq!(buffer, "hel");
     }
 
@@ -147,7 +160,10 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::new();
 
-        assert_eq!(handler.process_byte(BACK_SPACE, &mut buffer), ProcessResult::Ignore);
+        assert_eq!(
+            handler.process_byte(BACK_SPACE, &mut buffer),
+            ProcessResult::Ignore
+        );
         assert_eq!(buffer, "");
     }
 
@@ -168,7 +184,10 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::from("e");
 
-        assert_eq!(handler.process_byte(TABULATION, &mut buffer), ProcessResult::NoCompletion);
+        assert_eq!(
+            handler.process_byte(TABULATION, &mut buffer),
+            ProcessResult::NoCompletion
+        );
         assert_eq!(buffer, "e");
     }
 
@@ -177,7 +196,10 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::from("xyz");
 
-        assert_eq!(handler.process_byte(TABULATION, &mut buffer), ProcessResult::NoCompletion);
+        assert_eq!(
+            handler.process_byte(TABULATION, &mut buffer),
+            ProcessResult::NoCompletion
+        );
         assert_eq!(buffer, "xyz");
     }
 
@@ -186,11 +208,17 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::from("echo test");
 
-        assert_eq!(handler.process_byte(LINEBREAK, &mut buffer), ProcessResult::Submit);
+        assert_eq!(
+            handler.process_byte(LINEBREAK, &mut buffer),
+            ProcessResult::Submit
+        );
         assert_eq!(buffer, "echo test");
 
         let mut buffer2 = String::from("pwd");
-        assert_eq!(handler.process_byte(CARRIAGE, &mut buffer2), ProcessResult::Submit);
+        assert_eq!(
+            handler.process_byte(CARRIAGE, &mut buffer2),
+            ProcessResult::Submit
+        );
         assert_eq!(buffer2, "pwd");
     }
 
@@ -199,7 +227,10 @@ mod tests {
         let handler = InputHandler::new();
         let mut buffer = String::from("some input");
 
-        assert_eq!(handler.process_byte(CTRL_C, &mut buffer), ProcessResult::Interrupted);
+        assert_eq!(
+            handler.process_byte(CTRL_C, &mut buffer),
+            ProcessResult::Interrupted
+        );
         assert_eq!(buffer, "some input"); // Buffer unchanged
     }
 
@@ -214,8 +245,14 @@ mod tests {
         assert_eq!(handler.process_byte(27, &mut buffer), ProcessResult::Ignore); // ESC
 
         // DEL and beyond
-        assert_eq!(handler.process_byte(128, &mut buffer), ProcessResult::Ignore);
-        assert_eq!(handler.process_byte(255, &mut buffer), ProcessResult::Ignore);
+        assert_eq!(
+            handler.process_byte(128, &mut buffer),
+            ProcessResult::Ignore
+        );
+        assert_eq!(
+            handler.process_byte(255, &mut buffer),
+            ProcessResult::Ignore
+        );
 
         assert_eq!(buffer, "");
     }
