@@ -37,8 +37,9 @@ impl InputHandler {
                 TABULATION => {
                     let completion = self.completion.complete(&buffer);
                     if let Some(completion_item) = completion {
+                        let completion_item = format!("{completion_item} ");
                         buffer.push_str(&completion_item);
-                        self.write_output(&mut stdout, format!("{completion_item} ").as_bytes())?;
+                        self.write_output(&mut stdout, completion_item.as_bytes())?;
                     }
                 }
                 CARRIAGE | LINEBREAK => {
