@@ -1,0 +1,11 @@
+pub const SINGLE_QUOTE: char = '\'';
+pub const DOUBLE_QUOTE: char = '"';
+pub const BACK_SLASH: char = '\\';
+pub const REDIRECT_OUTPUT: char = '>';
+pub const TABULATION: u8 = b'\t';
+pub const CARRIAGE: u8 = b'\r';
+pub const LINEBREAK: u8 = b'\n';
+pub const CRLF: &str = "\r\n";
+pub const BACK_SPACE: u8 = 127;
+pub const CTRL_C: u8 = 3;
+pub const CTRL_H: u8 = 8;

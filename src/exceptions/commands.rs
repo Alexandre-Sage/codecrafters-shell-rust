@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum CommandError {
+pub enum ShellError {
     #[error("{0}: command not found")]
     CommandNotFound(String),
     #[error("Too many arguments: expected {0}, got {1}")]

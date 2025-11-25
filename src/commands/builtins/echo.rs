@@ -6,8 +6,7 @@ impl Command for Echo {
     fn execute(
         &self,
         args: &[String],
-    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
-    {
+    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::ShellError> {
         Ok(CommandResult::stdout(format!("{}\n", args.join(" "))))
     }
 }
@@ -21,19 +20,13 @@ mod tests {
     fn echo_hello_world() {
         let result = Echo.execute(&["hello".to_string(), "world".to_string()]);
         assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            CommandResult::stdout("hello world\n")
-        )
+        assert_eq!(result.unwrap(), CommandResult::stdout("hello world\n"))
     }
 
     #[test]
     fn echo_empty() {
         let result = Echo.execute(&[]);
         assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            CommandResult::stdout("\n")
-        )
+        assert_eq!(result.unwrap(), CommandResult::stdout("\n"))
     }
 }

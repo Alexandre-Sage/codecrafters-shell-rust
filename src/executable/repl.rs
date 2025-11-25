@@ -1,24 +1,25 @@
-use std::io::{self, Write};
+use std::char;
+use std::io::{self, stdout, Read, Stdin, Stdout, StdoutLock, Write};
 use std::sync::Arc;
 
 use anyhow::Result;
 
+use crate::shell::input::input_handler::InputHandler;
+use crate::shell::raw_mode::RawMode;
 use crate::{
     commands::{
         builtins::{cd::Cd, echo::Echo, exit::Exit, pwd::Pwd, r#type::Type},
         registry::CommandRegistry,
         CommandToken,
     },
-    exceptions::commands::CommandError,
+    exceptions::commands::ShellError,
     external::ExternalCommand,
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::{
-        file::FileManager, input_parser::InputParser, output_handler::OutputHandler, path::Path,
+        file::FileManager, input::input_parser::InputParser, output_handler::OutputHandler,
+        path::Path,
     },
 };
-
-const TABULATION: &str = "\t";
-struct CompletionHandler;
 
 pub struct Repl {
     builtins: CommandRegistry,
@@ -59,33 +60,33 @@ impl Repl {
         io::stdout().flush()
     }
 
-    pub fn spawn(&self) -> Result<(), CommandError> {
+    pub fn spawn(&self) -> Result<(), ShellError> {
+        let input_handler = InputHandler::new();
         loop {
             self.prompt()
-                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
+                .map_err(|err| ShellError::Uncontroled(err.to_string()))?;
+            let buffer = input_handler.handle()?;
 
-            let mut buffer = String::new();
-
-            io::stdin()
-                .read_line(&mut buffer)
-                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
-
-            let (parsed_command, redirection) = self.input_parser.parse(buffer.trim())?;
-
-            let command = self.builtins.execute(parsed_command);
-            match command {
-                Err(err) => self
-                    .output_handler
-                    .handle(CommandResult::Error(err), redirection),
-                Ok(res) => self.output_handler.handle(res, redirection),
-            }?;
+            match buffer {
+                Some(buffer) => {
+                    let (parsed_command, redirection) = self.input_parser.parse(buffer.trim())?;
+                    let command = self.builtins.execute(parsed_command);
+                    match command {
+                        Err(err) => self
+                            .output_handler
+                            .handle(CommandResult::Error(err), redirection),
+                        Ok(res) => self.output_handler.handle(res, redirection),
+                    }?;
+                }
+                None => print!("\n"),
+            }
 
             io::stderr()
                 .flush()
-                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
+                .map_err(|err| ShellError::Uncontroled(err.to_string()))?;
             io::stdout()
                 .flush()
-                .map_err(|err| CommandError::Uncontroled(err.to_string()))?;
+                .map_err(|err| ShellError::Uncontroled(err.to_string()))?;
         }
     }
 }

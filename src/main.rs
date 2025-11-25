@@ -13,7 +13,7 @@ pub mod external;
 pub(crate) mod port;
 pub mod shell;
 
-fn main() -> Result<(), exceptions::commands::CommandError> {
+fn main() -> Result<(), exceptions::commands::ShellError> {
     let file_manager = FileManager.into();
     let output_handler = OutputHandler::new(Arc::clone(&file_manager)).into();
 

@@ -1,5 +1,5 @@
 use crate::{
-    exceptions::commands::CommandError,
+    exceptions::commands::ShellError,
     port::command::{Command, CommandResult},
 };
 
@@ -9,10 +9,9 @@ impl Command for Exit {
     fn execute(
         &self,
         args: &[String],
-    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
-    {
+    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::ShellError> {
         if args.len() > 1 {
-            return Err(CommandError::TooManyArguments(
+            return Err(ShellError::TooManyArguments(
                 "at most 1".to_string(),
                 args.len(),
             ));
@@ -21,7 +20,7 @@ impl Command for Exit {
         let arg = if !args.is_empty() {
             args[0]
                 .parse()
-                .map_err(|_| CommandError::ParsingError("integer".to_string()))?
+                .map_err(|_| ShellError::ParsingError("integer".to_string()))?
         } else {
             0
         };

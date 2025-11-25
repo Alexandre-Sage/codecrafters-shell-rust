@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::exceptions::commands::CommandError;
+use crate::exceptions::commands::ShellError;
 
 #[derive(Debug, PartialEq)]
 pub enum RedirectionChannel {
@@ -15,14 +15,14 @@ pub enum RedirectionType {
 }
 
 impl TryFrom<&str> for RedirectionType {
-    type Error = CommandError;
+    type Error = ShellError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             ">" | "1>" => Ok(Self::WriteOutput(RedirectionChannel::Stdout)),
             "2>" => Ok(Self::WriteOutput(RedirectionChannel::Stderr)),
             ">>" | "1>>" => Ok(Self::AppendOutput(RedirectionChannel::Stdout)),
             "2>>" => Ok(Self::AppendOutput(RedirectionChannel::Stderr)),
-            _ => Err(CommandError::Uncontroled("No redirection".to_owned())),
+            _ => Err(ShellError::Uncontroled("No redirection".to_owned())),
         }
     }
 }

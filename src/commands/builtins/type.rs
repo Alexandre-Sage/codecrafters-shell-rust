@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use crate::{
     commands::CommandToken,
     exceptions::{
-        commands::CommandError::{self, TooManyArguments},
+        commands::ShellError::{self, TooManyArguments},
         type_command_error::TypeCommandError,
     },
     port::command::{Command, CommandResult},
@@ -24,10 +24,9 @@ impl Command for Type {
     fn execute(
         &self,
         args: &[String],
-    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
-    {
+    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::ShellError> {
         if args.is_empty() {
-            return Err(CommandError::EmptyArgs(1));
+            return Err(ShellError::EmptyArgs(1));
         }
 
         if args.len() > 1 {
@@ -36,9 +35,10 @@ impl Command for Type {
         let arg = &args[0];
 
         if CommandToken::from_str(arg).is_ok() {
-            return Ok(CommandResult::stdout(
-                format!("{} is a shell builtin\n", arg),
-            ));
+            return Ok(CommandResult::stdout(format!(
+                "{} is a shell builtin\n",
+                arg
+            )));
         }
 
         match self.path_dirs.find_executable(arg) {
@@ -53,7 +53,7 @@ impl Command for Type {
 
 #[cfg(test)]
 mod tests {
-    use crate::{exceptions::commands::CommandError, port::command::CommandResult};
+    use crate::{exceptions::commands::ShellError, port::command::CommandResult};
     use std::path::PathBuf;
 
     use super::*;
@@ -106,7 +106,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CommandError::TypeCommandError(TypeCommandError::NotFound(
+            ShellError::TypeCommandError(TypeCommandError::NotFound(
                 "nonexistentcommand".to_string()
             ))
         )
@@ -117,7 +117,7 @@ mod tests {
         let paths = create_empty_path();
         let result = Type::new(paths).execute(&[]);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), CommandError::EmptyArgs(1))
+        assert_eq!(result.unwrap_err(), ShellError::EmptyArgs(1))
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CommandError::TooManyArguments("1".to_string(), 2)
+            ShellError::TooManyArguments("1".to_string(), 2)
         )
     }
 
@@ -139,7 +139,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CommandError::TooManyArguments("1".to_string(), 3)
+            ShellError::TooManyArguments("1".to_string(), 3)
         )
     }
 
@@ -185,7 +185,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CommandError::TypeCommandError(TypeCommandError::NotFound(
+            ShellError::TypeCommandError(TypeCommandError::NotFound(
                 "thisdoesnotexist12345".to_string()
             ))
         )

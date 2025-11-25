@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     commands::CommandToken,
-    exceptions::commands::CommandError,
+    exceptions::commands::ShellError,
     port::{
         command::{Command, CommandResult},
         shell_component::ShellComponent,
@@ -25,12 +25,12 @@ impl CommandRegistry {
         }
     }
 
-    pub fn try_get(&self, command: &str) -> Result<&Arc<dyn Command>, CommandError> {
+    pub fn try_get(&self, command: &str) -> Result<&Arc<dyn Command>, ShellError> {
         let token = command.parse()?;
 
         self.registry
             .get(&token)
-            .ok_or(CommandError::CommandNotFound(command.to_owned()))
+            .ok_or(ShellError::CommandNotFound(command.to_owned()))
     }
 
     pub fn register(&mut self, token: CommandToken, command: Arc<dyn Command>) {
@@ -39,7 +39,7 @@ impl CommandRegistry {
 }
 
 impl ShellComponent for CommandRegistry {
-    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, CommandError> {
+    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, ShellError> {
         let command = self.try_get(command)?;
         let result = command.execute(args)?;
 
@@ -57,7 +57,7 @@ mod tests {
 
     struct FakeCommand;
     impl Command for FakeCommand {
-        fn execute(&self, _args: &[String]) -> Result<CommandResult, CommandError> {
+        fn execute(&self, _args: &[String]) -> Result<CommandResult, ShellError> {
             todo!()
         }
     }
@@ -81,7 +81,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
-            CommandError::CommandNotFound("exit".to_owned())
+            ShellError::CommandNotFound("exit".to_owned())
         )
     }
 }

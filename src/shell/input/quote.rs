@@ -1,6 +1,6 @@
 use crate::{
-    exceptions::commands::CommandError,
-    shell::input_parser::commons::{DOUBLE_QUOTE, SINGLE_QUOTE},
+    exceptions::commands::ShellError,
+    shell::input::commons::{DOUBLE_QUOTE, SINGLE_QUOTE},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -10,12 +10,12 @@ pub enum QuoteType {
 }
 
 impl TryFrom<char> for QuoteType {
-    type Error = CommandError;
+    type Error = ShellError;
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
             SINGLE_QUOTE => Ok(Self::Single),
             DOUBLE_QUOTE => Ok(Self::Double),
-            _ => Err(CommandError::Uncontroled("Not a quote".to_owned())),
+            _ => Err(ShellError::Uncontroled("Not a quote".to_owned())),
         }
     }
 }

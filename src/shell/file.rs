@@ -1,6 +1,6 @@
 use std::{io::Write, path::PathBuf};
 
-use crate::exceptions::commands::CommandError;
+use crate::exceptions::commands::ShellError;
 
 pub struct FileManager;
 
@@ -12,7 +12,7 @@ impl FileManager {
         path == "~" || path == "~/"
     }
 
-    pub fn handle_path(&self, args: &str) -> Result<PathBuf, CommandError> {
+    pub fn handle_path(&self, args: &str) -> Result<PathBuf, ShellError> {
         let home_dir = std::env::home_dir().unwrap();
 
         if self.should_go_to_homedir(args) {
@@ -25,27 +25,27 @@ impl FileManager {
         };
 
         if !path.exists() {
-            return Err(CommandError::DirectoryNotFound(path));
+            return Err(ShellError::DirectoryNotFound(path));
         }
 
         Ok(path)
     }
 
-    pub fn create_file(&self, path: &PathBuf) -> Result<(), CommandError> {
-        std::fs::File::create(path).map_err(|err| CommandError::Uncontroled(err.to_string()))?;
+    pub fn create_file(&self, path: &PathBuf) -> Result<(), ShellError> {
+        std::fs::File::create(path).map_err(|err| ShellError::Uncontroled(err.to_string()))?;
         Ok(())
     }
 
-    pub fn create_file_if_no_exist(&self, path: &PathBuf) -> Result<(), CommandError> {
+    pub fn create_file_if_no_exist(&self, path: &PathBuf) -> Result<(), ShellError> {
         if !path.exists() {
             return self.create_file(&path);
         }
         Ok(())
     }
 
-    pub fn parent_dir_exist(&self, path: &PathBuf) -> Result<(), CommandError> {
+    pub fn parent_dir_exist(&self, path: &PathBuf) -> Result<(), ShellError> {
         path.parent()
-            .ok_or(CommandError::NotADirectory(path.to_owned()))?;
+            .ok_or(ShellError::NotADirectory(path.to_owned()))?;
 
         Ok(())
     }
@@ -54,20 +54,20 @@ impl FileManager {
         &self,
         path: &PathBuf,
         buffer: impl AsRef<[u8]>,
-    ) -> Result<(), CommandError> {
-        std::fs::write(path, buffer).map_err(|err| CommandError::Uncontroled(err.to_string()))
+    ) -> Result<(), ShellError> {
+        std::fs::write(path, buffer).map_err(|err| ShellError::Uncontroled(err.to_string()))
     }
 
     pub fn append_to_file(
         &self,
         path: &PathBuf,
         buffer: impl AsRef<[u8]>,
-    ) -> Result<(), CommandError> {
+    ) -> Result<(), ShellError> {
         std::fs::File::options()
             .append(true)
             .create(true)
             .open(path)
             .and_then(|mut file| file.write_all(buffer.as_ref()))
-            .map_err(|err| CommandError::Uncontroled(err.to_string()))
+            .map_err(|err| ShellError::Uncontroled(err.to_string()))
     }
 }

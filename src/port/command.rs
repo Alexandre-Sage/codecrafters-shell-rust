@@ -1,11 +1,11 @@
-use crate::exceptions::commands::CommandError;
+use crate::exceptions::commands::ShellError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CommandResult {
     Exit(i32),
     Stdio(String, String),
     Empty,
-    Error(CommandError),
+    Error(ShellError),
 }
 
 impl CommandResult {
@@ -19,5 +19,5 @@ impl CommandResult {
 }
 
 pub(crate) trait Command {
-    fn execute(&self, args: &[String]) -> Result<CommandResult, CommandError>;
+    fn execute(&self, args: &[String]) -> Result<CommandResult, ShellError>;
 }

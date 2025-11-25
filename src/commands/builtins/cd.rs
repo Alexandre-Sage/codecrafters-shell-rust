@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::{
-    exceptions::commands::CommandError,
+    exceptions::commands::ShellError,
     port::command::{Command, CommandResult},
     shell::file::FileManager,
 };
@@ -18,9 +18,8 @@ impl Cd {
     fn change_dir(
         &self,
         dir: PathBuf,
-    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
-    {
-        std::env::set_current_dir(dir).map_err(|err| CommandError::Uncontroled(err.to_string()))?;
+    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::ShellError> {
+        std::env::set_current_dir(dir).map_err(|err| ShellError::Uncontroled(err.to_string()))?;
 
         Ok(CommandResult::Empty)
     }
@@ -30,17 +29,16 @@ impl Command for Cd {
     fn execute(
         &self,
         args: &[String],
-    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::CommandError>
-    {
+    ) -> Result<crate::port::command::CommandResult, crate::exceptions::commands::ShellError> {
         if args.len() > 1 {
-            return Err(CommandError::TooManyArguments("1".to_string(), args.len()));
+            return Err(ShellError::TooManyArguments("1".to_string(), args.len()));
         }
 
         let path = args.first().map_or("", |s| s.as_str());
         let path = self.file_manager.handle_path(path)?;
 
         if !path.is_dir() {
-            return Err(CommandError::NotADirectory(path));
+            return Err(ShellError::NotADirectory(path));
         }
 
         self.change_dir(path)
@@ -77,7 +75,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CommandError::DirectoryNotFound("/x/y/z".parse().unwrap())
+            ShellError::DirectoryNotFound("/x/y/z".parse().unwrap())
         )
     }
 
@@ -87,7 +85,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CommandError::NotADirectory("/bin/cat".to_string().into())
+            ShellError::NotADirectory("/bin/cat".to_string().into())
         )
     }
 

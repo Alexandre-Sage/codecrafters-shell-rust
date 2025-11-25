@@ -1,20 +1,10 @@
-pub mod commons;
-pub mod quote;
-pub mod redirection_context;
-
 use std::{char, path::PathBuf, sync::Arc, usize};
 
-use crate::{
-    exceptions::commands::CommandError,
-    shell::{
-        file::FileManager,
-        input_parser::{
-            commons::{BACK_SLASH, DOUBLE_QUOTE, SINGLE_QUOTE},
-            quote::{QuotePosition, QuoteType},
-            redirection_context::{RedirectionContext, RedirectionType},
-        },
-    },
-};
+use crate::exceptions::commands::ShellError;
+use crate::shell::file::FileManager;
+use crate::shell::input::commons::{BACK_SLASH, DOUBLE_QUOTE, SINGLE_QUOTE};
+use crate::shell::input::quote::{QuotePosition, QuoteType};
+use crate::shell::input::redirection_context::{RedirectionContext, RedirectionType};
 
 pub struct InputParser {
     file_manager: Arc<FileManager>,
@@ -42,7 +32,7 @@ impl InputParser {
         Self { file_manager }
     }
 
-    fn quote_positions(&self, args: &str) -> Result<Vec<QuotePosition>, CommandError> {
+    fn quote_positions(&self, args: &str) -> Result<Vec<QuotePosition>, ShellError> {
         if !args.contains(SINGLE_QUOTE) && !args.contains(DOUBLE_QUOTE) {
             return Ok(vec![]);
         }
@@ -77,7 +67,7 @@ impl InputParser {
         }
 
         if opening_quote.is_some() {
-            return Err(CommandError::MissingClosingQuote);
+            return Err(ShellError::MissingClosingQuote);
         }
 
         Ok(quote_positions)
@@ -151,7 +141,7 @@ impl InputParser {
     fn parse_redirection(
         &self,
         args: &mut Vec<String>,
-    ) -> Result<Option<RedirectionContext>, CommandError> {
+    ) -> Result<Option<RedirectionContext>, ShellError> {
         let maybe_redirection = args.iter().enumerate().find_map(|(idx, part)| {
             RedirectionType::try_from(part.as_str())
                 .map(|res| (idx, res))
@@ -159,7 +149,7 @@ impl InputParser {
         });
         if let Some((pos, redirection)) = maybe_redirection {
             if pos + 1 >= args.len() {
-                return Err(CommandError::Uncontroled(
+                return Err(ShellError::Uncontroled(
                     "Missing filename after redirection operator".to_string(),
                 ));
             }
@@ -180,7 +170,7 @@ impl InputParser {
     pub fn parse(
         &self,
         input: &str,
-    ) -> Result<(ParsedCommand, Option<RedirectionContext>), CommandError> {
+    ) -> Result<(ParsedCommand, Option<RedirectionContext>), ShellError> {
         let quote_positions = self.quote_positions(input)?;
         let mut parsed_args = self.parse_args(&quote_positions, input);
         let maybe_redirection = self.parse_redirection(&mut parsed_args)?;
@@ -195,7 +185,8 @@ impl InputParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::shell::input_parser::redirection_context::RedirectionChannel;
+
+    use crate::shell::input::redirection_context::{self, RedirectionChannel};
 
     use super::*;
 
@@ -311,7 +302,7 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err();
-        assert_eq!(err_msg, CommandError::MissingClosingQuote);
+        assert_eq!(err_msg, ShellError::MissingClosingQuote);
     }
 
     #[test]
@@ -421,7 +412,7 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err();
-        assert_eq!(err_msg, CommandError::MissingClosingQuote);
+        assert_eq!(err_msg, ShellError::MissingClosingQuote);
     }
 
     #[test]
@@ -1279,7 +1270,7 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            matches!(err, CommandError::Uncontroled(_)),
+            matches!(err, ShellError::Uncontroled(_)),
             "Expected Unknown error for missing filename after >"
         );
     }

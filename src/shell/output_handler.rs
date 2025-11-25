@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
-    exceptions::commands::CommandError,
+    exceptions::commands::ShellError,
     port::command::CommandResult,
-    shell::{file::FileManager, input_parser::redirection_context::RedirectionContext},
+    shell::{file::FileManager, input::redirection_context::RedirectionContext},
 };
 
 pub struct OutputHandler {
@@ -19,7 +19,7 @@ impl OutputHandler {
         &self,
         command_result: CommandResult,
         redirection: Option<RedirectionContext>,
-    ) -> Result<(), CommandError> {
+    ) -> Result<(), ShellError> {
         match command_result {
             CommandResult::Exit(code) => std::process::exit(code),
             CommandResult::Stdio(stdout, stderr) => {
@@ -49,7 +49,7 @@ impl OutputHandler {
         stdout: &str,
         stderr: &str,
         redirection: Option<RedirectionContext>,
-    ) -> Result<(), CommandError> {
+    ) -> Result<(), ShellError> {
         if let Some(redirection) = redirection {
             if redirection.should_write_stdout() {
                 self.write_stderr(stderr);

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    exceptions::commands::CommandError,
+    exceptions::commands::ShellError,
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::path::Path,
 };
@@ -17,7 +17,7 @@ impl ExternalCommand {
 }
 
 impl ShellComponent for ExternalCommand {
-    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, CommandError> {
+    fn handler(&self, command: &str, args: &[String]) -> Result<CommandResult, ShellError> {
         if self.path_dirs.find_executable(command).is_some() {
             let output = std::process::Command::new(command)
                 .args(args)
@@ -25,7 +25,7 @@ impl ShellComponent for ExternalCommand {
                 // .stderr(Stdio::inherit())
                 // .status()
                 .output()
-                .map_err(|err| CommandError::ExternalError(err.to_string()))?;
+                .map_err(|err| ShellError::ExternalError(err.to_string()))?;
 
             let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -33,7 +33,7 @@ impl ShellComponent for ExternalCommand {
             return Ok(CommandResult::Stdio(stdout.to_string(), stderr.to_string()));
         }
 
-        Err(CommandError::CommandNotFound(command.to_owned()).into())
+        Err(ShellError::CommandNotFound(command.to_owned()).into())
     }
 
     fn next(&self) -> Option<Arc<dyn ShellComponent>> {
