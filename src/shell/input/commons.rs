@@ -9,3 +9,4 @@ pub const CRLF: &str = "\r\n";
 pub const BACK_SPACE: u8 = 127;
 pub const CTRL_C: u8 = 3;
 pub const CTRL_H: u8 = 8;
+pub const BELL_CHAR: &str = "\x07";

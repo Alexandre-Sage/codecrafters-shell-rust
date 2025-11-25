@@ -4,7 +4,9 @@ use crate::{
     exceptions::commands::ShellError,
     shell::{
         completion::builtins::BuiltinsCompletion,
-        input::commons::{BACK_SPACE, CARRIAGE, CRLF, CTRL_C, CTRL_H, LINEBREAK, TABULATION},
+        input::commons::{
+            BACK_SPACE, BELL_CHAR, CARRIAGE, CRLF, CTRL_C, CTRL_H, LINEBREAK, TABULATION,
+        },
         raw_mode::RawMode,
     },
 };
@@ -36,10 +38,15 @@ impl InputHandler {
             match tmp_buffer[0] {
                 TABULATION => {
                     let completion = self.completion.complete(&buffer);
-                    if let Some(completion_item) = completion {
-                        let completion_item = format!("{completion_item} ");
-                        buffer.push_str(&completion_item);
-                        self.write_output(&mut stdout, completion_item.as_bytes())?;
+                    match completion {
+                        Some(completion_item) => {
+                            let completion_item = format!("{completion_item} ");
+                            buffer.push_str(&completion_item);
+                            self.write_output(&mut stdout, completion_item.as_bytes())?;
+                        }
+                        None => {
+                            self.write_output(&mut stdout, BELL_CHAR.as_bytes())?;
+                        }
                     }
                 }
                 CARRIAGE | LINEBREAK => {
