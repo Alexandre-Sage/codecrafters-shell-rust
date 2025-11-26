@@ -18,7 +18,7 @@ use crate::{
     port::{command::CommandResult, shell_component::ShellComponent},
     shell::{
         file::FileManager, input::input_parser::InputParser, output_handler::OutputHandler,
-        path::PathDirs,
+        path::PathDirsProvider,
     },
 };
 
@@ -32,7 +32,7 @@ pub struct Repl {
 
 impl Repl {
     pub fn new(file_manager: Arc<FileManager>, output_handler: Arc<OutputHandler>) -> Self {
-        let path_dirs = Arc::new(PathDirs::from_env());
+        let path_dirs = Arc::new(PathDirsProvider::from_env());
         let external_command = Arc::new(ExternalCommand::new(Arc::clone(&path_dirs)));
 
         let mut registry = CommandRegistry::new(Arc::clone(&path_dirs), external_command);

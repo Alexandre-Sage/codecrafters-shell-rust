@@ -2,11 +2,11 @@ use std::{fs::ReadDir, os::unix::fs::PermissionsExt, path::PathBuf, vec};
 
 use crate::shell::completion::path_dirs;
 
-pub struct PathDirs {
+pub struct PathDirsProvider {
     path_dirs: Vec<PathBuf>,
 }
 
-impl PathDirs {
+impl PathDirsProvider {
     pub fn from_env() -> Self {
         let paths = std::env::var("PATH").unwrap_or("".to_owned());
         let paths: Vec<PathBuf> = std::env::split_paths(&paths).collect();
@@ -55,20 +55,20 @@ mod tests {
     #[test]
     fn new_creates_path_with_directories() {
         let dirs = vec![PathBuf::from("/usr/bin"), PathBuf::from("/bin")];
-        let path = PathDirs::new(dirs.clone());
+        let path = PathDirsProvider::new(dirs.clone());
 
         assert_eq!(path.path_dirs.len(), 2);
     }
 
     #[test]
     fn new_creates_empty_path() {
-        let path = PathDirs::new(vec![]);
+        let path = PathDirsProvider::new(vec![]);
         assert_eq!(path.path_dirs.len(), 0);
     }
 
     #[test]
     fn from_env_creates_path_from_environment() {
-        let path = PathDirs::from_env();
+        let path = PathDirsProvider::from_env();
         // PATH typically has at least one directory
         assert!(path.path_dirs.len() >= 0);
     }
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn find_executable_finds_ls_in_system_path() {
-        let path = PathDirs::from_env();
+        let path = PathDirsProvider::from_env();
         let result = path.find_executable("ls");
 
         // ls should exist in at least one PATH directory on Unix systems
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn find_executable_finds_cat_in_system_path() {
-        let path = PathDirs::from_env();
+        let path = PathDirsProvider::from_env();
         let result = path.find_executable("cat");
 
         assert!(result.is_some(), "cat should be found in PATH");
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn find_executable_returns_none_for_nonexistent() {
-        let path = PathDirs::from_env();
+        let path = PathDirsProvider::from_env();
         let result = path.find_executable("thiscommanddoesnotexist12345");
 
         assert!(result.is_none(), "Should not find nonexistent command");
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn find_executable_with_empty_path_returns_none() {
-        let path = PathDirs::new(vec![]);
+        let path = PathDirsProvider::new(vec![]);
         let result = path.find_executable("ls");
 
         assert!(result.is_none(), "Should not find anything with empty PATH");
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn find_executable_with_specific_directories() {
-        let path = PathDirs::new(vec![PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
+        let path = PathDirsProvider::new(vec![PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
         let result = path.find_executable("ls");
 
         // ls should be in either /usr/bin or /bin on most Unix systems
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn find_executable_returns_first_match() {
         // If executable exists in multiple directories, returns first
-        let path = PathDirs::new(vec![PathBuf::from("/bin"), PathBuf::from("/usr/bin")]);
+        let path = PathDirsProvider::new(vec![PathBuf::from("/bin"), PathBuf::from("/usr/bin")]);
 
         let result = path.find_executable("sh");
 
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn find_executable_ignores_directories() {
         // Create a path that includes a directory that exists
-        let path = PathDirs::new(vec![
+        let path = PathDirsProvider::new(vec![
             PathBuf::from("/usr"), // This is a directory, not a file
         ]);
 
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn find_executable_with_nonexistent_directory_in_path() {
-        let path = PathDirs::new(vec![
+        let path = PathDirsProvider::new(vec![
             PathBuf::from("/this/does/not/exist"),
             PathBuf::from("/usr/bin"),
         ]);
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn find_executable_with_empty_name() {
-        let path = PathDirs::from_env();
+        let path = PathDirsProvider::from_env();
         let result = path.find_executable("");
 
         // Empty name should not match anything
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn find_executable_case_sensitive() {
-        let path = PathDirs::from_env();
+        let path = PathDirsProvider::from_env();
 
         // Unix filenames are case-sensitive
         let lower_result = path.find_executable("ls");

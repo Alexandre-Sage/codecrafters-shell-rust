@@ -13,7 +13,9 @@ impl FileManager {
     }
 
     pub fn handle_path(&self, args: &str) -> Result<PathBuf, ShellError> {
-        let home_dir = std::env::home_dir().unwrap();
+        let home_dir = std::env::home_dir().ok_or(ShellError::Uncontroled(
+            "Could not find home dir".to_owned(),
+        ))?;
 
         if self.should_go_to_homedir(args) {
             return Ok(home_dir);

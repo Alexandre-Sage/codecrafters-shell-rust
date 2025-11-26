@@ -7,7 +7,7 @@ use crate::{
             path_dirs::{self, PathDirsCompletion},
             CompletionComponent,
         },
-        path::PathDirs,
+        path::PathDirsProvider,
     },
 };
 
@@ -17,7 +17,7 @@ pub struct BuiltinsCompletion {
 }
 
 impl BuiltinsCompletion {
-    pub fn new(path_dirs: Arc<PathDirs>) -> Self {
+    pub fn new(path_dirs: Arc<PathDirsProvider>) -> Self {
         let builtins = CommandToken::into_completion();
         let next = Arc::new(PathDirsCompletion::new(path_dirs));
         Self { builtins, next }
@@ -59,7 +59,7 @@ impl CompletionComponent for BuiltinsCompletion {
 mod tests {
     use super::*;
     fn setup() -> BuiltinsCompletion {
-        BuiltinsCompletion::new(Arc::new(PathDirs::from_env()))
+        BuiltinsCompletion::new(Arc::new(PathDirsProvider::from_env()))
     }
 
     #[test]

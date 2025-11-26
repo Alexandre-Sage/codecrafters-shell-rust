@@ -10,3 +10,5 @@ pub const BACK_SPACE: u8 = 127;
 pub const CTRL_C: u8 = 3;
 pub const CTRL_H: u8 = 8;
 pub const BELL_CHAR: &str = "\x07";
+pub const ASCII_SPACE: u8 = 32;
+pub const ASCII_DEL: u8 = 127;

@@ -5,16 +5,16 @@ use crate::{
     port::shell_component::ShellComponent,
     shell::{
         completion::{self, CompletionComponent},
-        path::PathDirs,
+        path::PathDirsProvider,
     },
 };
 
 pub struct PathDirsCompletion {
-    path_dirs: Arc<PathDirs>,
+    path_dirs: Arc<PathDirsProvider>,
 }
 
 impl PathDirsCompletion {
-    pub fn new(path_dirs: Arc<PathDirs>) -> Self {
+    pub fn new(path_dirs: Arc<PathDirsProvider>) -> Self {
         Self { path_dirs }
     }
 
