@@ -1,4 +1,4 @@
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Stdin, StdinLock, StdoutLock, Write};
 
 use crate::{
     exceptions::commands::ShellError,
@@ -11,6 +11,13 @@ use crate::{
         raw_mode::RawMode,
     },
 };
+
+// struct InputState<'a> {
+//     buffer: String,
+//     stdin: StdinLock<'a>,
+//     stdout: StdoutLock<'a>,
+//     tab_pressed_once: bool,
+// }
 
 pub(crate) struct InputHandler {
     completion: BuiltinsCompletion,
@@ -29,6 +36,8 @@ impl InputHandler {
         let mut stdin = io::stdin().lock();
         let mut stdout = io::stdout().lock();
 
+        let mut is_tab_pressed = false;
+
         loop {
             stdin
                 .read_exact(&mut tmp_buffer[..])
@@ -36,15 +45,24 @@ impl InputHandler {
 
             match tmp_buffer[0] {
                 TABULATION => {
-                    let completion = self.completion.execute(&buffer);
+                    let completion = self.completion.execute(&buffer, is_tab_pressed);
                     match completion {
                         Some(completion_item) => {
+                            if is_tab_pressed {
+                                self.write_output(
+                                    &mut stdout,
+                                    format!("{CRLF}{completion_item}").as_bytes(),
+                                )?;
+                                return Ok(None);
+                            }
+
                             let completion_item = format!("{completion_item} ");
                             buffer.push_str(&completion_item);
                             self.write_output(&mut stdout, completion_item.as_bytes())?;
                         }
                         None => {
                             self.write_output(&mut stdout, BELL_CHAR.as_bytes())?;
+                            is_tab_pressed = true;
                         }
                     }
                 }
@@ -57,6 +75,7 @@ impl InputHandler {
                         buffer.pop();
                         self.write_output(&mut stdout, b"\x08 \x08")?;
                     }
+                    is_tab_pressed = false;
                 }
                 CTRL_C => {
                     self.write_output(&mut stdout, b"^C\r\n")?;
@@ -65,8 +84,11 @@ impl InputHandler {
                 c if c >= ASCII_SPACE && c < ASCII_DEL => {
                     buffer.push(c as char);
                     self.write_output(&mut stdout, &[c])?;
+                    is_tab_pressed = false;
                 }
-                _ => {}
+                _ => {
+                    is_tab_pressed = false;
+                }
             }
         }
 

@@ -1,12 +1,8 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
-use crate::{
-    exceptions::commands::ShellError,
-    port::shell_component::ShellComponent,
-    shell::{
-        completion::{self, CompletionComponent},
-        path::PathDirsProvider,
-    },
+use crate::shell::{
+    completion::{Completion, CompletionComponent},
+    path::PathDirsProvider,
 };
 
 pub struct PathDirsCompletion {
@@ -21,8 +17,10 @@ impl PathDirsCompletion {
     fn read_dir(&self, path: &PathBuf) -> Option<std::fs::ReadDir> {
         std::fs::read_dir(path).ok()
     }
+}
 
-    pub fn complete(&self, exe_name: &str) -> Option<String> {
+impl Completion for PathDirsCompletion {
+    fn completion_items(&self, exe_name: &str) -> Vec<String> {
         let mut matches: HashSet<String> = HashSet::new();
 
         for path_dir in self.path_dirs.iter() {
@@ -42,20 +40,13 @@ impl PathDirsCompletion {
             }
         }
 
-        if matches.len() > 1 {
-            return None;
-        }
-
-        matches
-            .iter()
-            .next()
-            .map(|completion_item| completion_item[exe_name.len()..].to_owned())
+        matches.into_iter().collect()
     }
 }
 
 impl CompletionComponent for PathDirsCompletion {
-    fn handler(&self, args: &str) -> Option<String> {
-        self.complete(args)
+    fn handler(&self, args: &str, multiple: bool) -> Option<String> {
+        self.complete(args, multiple)
     }
 
     fn next(&self) -> Option<Arc<dyn CompletionComponent>> {

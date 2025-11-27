@@ -1,11 +1,12 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::{
     commands::CommandToken,
     shell::{
         completion::{
+            self,
             path_dirs::{self, PathDirsCompletion},
-            CompletionComponent,
+            Completion, CompletionComponent,
         },
         path::PathDirsProvider,
     },
@@ -22,26 +23,15 @@ impl BuiltinsCompletion {
         let next = Arc::new(PathDirsCompletion::new(path_dirs));
         Self { builtins, next }
     }
+}
 
-    pub fn complete(&self, args: &str) -> Option<String> {
-        let matches: Vec<_> = self
-            .builtins
+impl Completion for BuiltinsCompletion {
+    fn completion_items(&self, args: &str) -> Vec<String> {
+        self.builtins
             .iter()
+            .cloned()
             .filter(|builtin| builtin.starts_with(args))
-            .collect();
-
-        if matches.is_empty() {
-            return None;
-        }
-
-        if matches.len() > 1 {
-            return None;
-        }
-
-        let matched = matches[0];
-        let completion_item = matched[args.len()..].to_string();
-
-        Some(completion_item)
+            .collect()
     }
 }
 
@@ -50,8 +40,8 @@ impl CompletionComponent for BuiltinsCompletion {
         Some(Arc::clone(&self.next))
     }
 
-    fn handler(&self, args: &str) -> Option<String> {
-        self.complete(args)
+    fn handler(&self, args: &str, multiple: bool) -> Option<String> {
+        self.complete(args, multiple)
     }
 }
 
@@ -66,10 +56,10 @@ mod tests {
     fn complete_partial_command_with_single_match() {
         let completion = setup();
 
-        assert_eq!(completion.complete("ec"), Some("ho".to_string()));
-        assert_eq!(completion.complete("typ"), Some("e".to_string()));
-        assert_eq!(completion.complete("pw"), Some("d".to_string()));
-        assert_eq!(completion.complete("exi"), Some("t".to_string()));
+        assert_eq!(completion.complete("ec", false), Some("ho".to_string()));
+        assert_eq!(completion.complete("typ", false), Some("e".to_string()));
+        assert_eq!(completion.complete("pw", false), Some("d".to_string()));
+        assert_eq!(completion.complete("exi", false), Some("t".to_string()));
     }
 
     #[test]
@@ -77,25 +67,25 @@ mod tests {
         let completion = setup();
 
         // "e" matches both "echo" and "exit"
-        assert_eq!(completion.complete("e"), None);
+        assert_eq!(completion.complete("e", false), None);
     }
 
     #[test]
     fn complete_full_command_returns_empty_string() {
         let completion = setup();
 
-        assert_eq!(completion.complete("echo"), Some("".to_string()));
-        assert_eq!(completion.complete("exit"), Some("".to_string()));
-        assert_eq!(completion.complete("pwd"), Some("".to_string()));
+        assert_eq!(completion.complete("echo", false), Some("".to_string()));
+        assert_eq!(completion.complete("exit", false), Some("".to_string()));
+        assert_eq!(completion.complete("pwd", false), Some("".to_string()));
     }
 
     #[test]
     fn complete_no_match_returns_none() {
         let completion = setup();
 
-        assert_eq!(completion.complete("xyz"), None);
-        assert_eq!(completion.complete("ls"), None);
-        assert_eq!(completion.complete("unknown"), None);
+        assert_eq!(completion.complete("xyz", false), None);
+        assert_eq!(completion.complete("ls", false), None);
+        assert_eq!(completion.complete("unknown", false), None);
     }
 
     #[test]
@@ -103,6 +93,6 @@ mod tests {
         let completion = setup();
 
         // Empty string matches all commands - ambiguous
-        assert_eq!(completion.complete(""), None);
+        assert_eq!(completion.complete("", false), None);
     }
 }
