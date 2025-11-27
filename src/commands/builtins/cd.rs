@@ -7,11 +7,11 @@ use crate::{
 };
 
 pub struct Cd {
-    file_manager: FileManager,
+    file_manager: Arc<FileManager>,
 }
 
 impl Cd {
-    pub fn new(file_manager: FileManager) -> Self {
+    pub fn new(file_manager: Arc<FileManager>) -> Self {
         Self { file_manager }
     }
 
