@@ -7,14 +7,14 @@ use crate::shell::input::quote::{QuotePosition, QuoteType};
 use crate::shell::input::redirection_context::{RedirectionContext, RedirectionType};
 
 #[derive(Debug, Default)]
-struct ParserState {
+struct ParserState<'a> {
     escape_next: bool,
     current_arg: Vec<char>,
     parsed_args: Vec<String>,
-    quote_position: Option<QuotePosition>,
+    quote_position: Option<&'a QuotePosition>,
 }
 
-impl ParserState {
+impl<'a> ParserState<'a> {
     fn push_litteral(&mut self, char: char) {
         self.current_arg.push(char);
     }
@@ -34,7 +34,7 @@ impl ParserState {
         }
     }
 
-    fn set_quote_postion(&mut self, quote_position: QuotePosition) {
+    fn set_quote_postion(&mut self, quote_position: &'a QuotePosition) {
         self.quote_position.replace(quote_position);
     }
 }
@@ -103,7 +103,12 @@ impl InputParser {
             return Err(ShellError::MissingClosingQuote);
         }
 
-        Ok(quote_positions)
+        let quote_positions_filtered: Vec<_> = quote_positions
+            .into_iter()
+            .filter(|position| position.start() + 1 != *position.end())
+            .collect();
+
+        Ok(quote_positions_filtered)
     }
 
     fn should_escape_next(&self, state: &mut ParserState, char: char) {
@@ -122,12 +127,54 @@ impl InputParser {
         }
     }
 
-    pub fn parse_args(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
-        let quote_positions_filtered: Vec<_> = quote_positions
-            .iter()
-            .filter(|position| position.start() + 1 != *position.end())
-            .collect();
+    fn handle_quote(&self, parser_state: &mut ParserState, char: char) {
+        if char == BACK_SLASH
+            // TODO REMOVE UNWRAP IN LAST REFACTO ITERATION
+            && parser_state.quote_position.unwrap().is_doulbe_quote()
+            && !parser_state.escape_next
+        {
+            parser_state.escape_next();
+            return;
+        }
 
+        if parser_state.escape_next {
+            if char == DOUBLE_QUOTE || char == BACK_SLASH {
+                parser_state.push_litteral(char);
+            } else {
+                parser_state.push_litteral(BACK_SLASH);
+                parser_state.push_litteral(char);
+            }
+            parser_state.reset_escape();
+            return;
+        }
+        parser_state.push_litteral(char);
+        return;
+    }
+
+    fn handle_regular(&self, parser_state: &mut ParserState, args: &str, idx: usize, char: char) {
+        if char == BACK_SLASH && !parser_state.escape_next && idx != args.len() - 1 {
+            parser_state.escape_next();
+            return;
+        }
+
+        if char == ' ' && !parser_state.escape_next {
+            parser_state.finalize_arg();
+            return;
+        }
+
+        if (char != SINGLE_QUOTE && char != DOUBLE_QUOTE && char != BACK_SLASH)
+            || parser_state.escape_next
+        {
+            parser_state.push_litteral(char);
+            parser_state.reset_escape();
+        }
+    }
+
+    pub fn parse_args(
+        &self,
+        quote_positions_filtered: &[QuotePosition],
+        args: &str,
+    ) -> Vec<String> {
         let mut parser_state = ParserState::default();
 
         let c = args.chars();
@@ -140,48 +187,17 @@ impl InputParser {
                     .find(|pos| idx > *pos.start() && idx < *pos.end());
 
                 if let Some(quote_pos) = maybe_quote_pos {
-                    if char == BACK_SLASH
-                        && quote_pos.is_doulbe_quote()
-                        && !parser_state.escape_next
-                    {
-                        parser_state.escape_next();
-                        continue;
-                    }
-
-                    if parser_state.escape_next {
-                        if char == DOUBLE_QUOTE || char == BACK_SLASH {
-                            parser_state.push_litteral(char);
-                        } else {
-                            parser_state.push_litteral(BACK_SLASH);
-                            parser_state.push_litteral(char);
-                        }
-                        parser_state.reset_escape();
-                        continue;
-                    }
-                    parser_state.push_litteral(char);
+                    parser_state.set_quote_postion(&quote_pos);
+                    self.handle_quote(&mut parser_state, char);
                     continue;
                 }
             }
 
-            if char == BACK_SLASH && !parser_state.escape_next && idx != args.len() - 1 {
-                parser_state.escape_next();
-                continue;
-            }
-
-            if char == ' ' && !parser_state.escape_next {
-                parser_state.finalize_arg();
-                continue;
-            }
-
-            if (char != SINGLE_QUOTE && char != DOUBLE_QUOTE && char != BACK_SLASH)
-                || parser_state.escape_next
-            {
-                parser_state.push_litteral(char);
-            }
-
-            parser_state.reset_escape();
+            self.handle_regular(&mut parser_state, args, idx, char);
         }
+
         parser_state.finalize_arg();
+
         parser_state.parsed_args
     }
 
