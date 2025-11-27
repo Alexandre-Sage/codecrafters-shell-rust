@@ -15,7 +15,7 @@ struct ParserState<'a> {
 }
 
 impl<'a> ParserState<'a> {
-    fn push_litteral(&mut self, char: char) {
+    fn push_literal(&mut self, char: char) {
         self.current_arg.push(char);
     }
 
@@ -34,7 +34,7 @@ impl<'a> ParserState<'a> {
         }
     }
 
-    fn set_quote_postion(&mut self, quote_position: &'a QuotePosition) {
+    fn set_quote_position(&mut self, quote_position: &'a QuotePosition) {
         self.quote_position.replace(quote_position);
     }
 }
@@ -111,22 +111,6 @@ impl InputParser {
         Ok(quote_positions_filtered)
     }
 
-    fn should_escape_next(&self, state: &mut ParserState, char: char) {
-        if char != BACK_SLASH {
-            return;
-        }
-
-        if let Some(quote_position) = state.quote_position {
-            if quote_position.is_doulbe_quote() && !state.escape_next {
-                state.escape_next()
-            }
-        }
-
-        if !state.escape_next {
-            state.escape_next()
-        }
-    }
-
     fn handle_quote(&self, parser_state: &mut ParserState, char: char) {
         if char == BACK_SLASH
             // TODO REMOVE UNWRAP IN LAST REFACTO ITERATION
@@ -138,16 +122,17 @@ impl InputParser {
         }
 
         if parser_state.escape_next {
-            if char == DOUBLE_QUOTE || char == BACK_SLASH {
-                parser_state.push_litteral(char);
-            } else {
-                parser_state.push_litteral(BACK_SLASH);
-                parser_state.push_litteral(char);
+            match char {
+                DOUBLE_QUOTE | BACK_SLASH => parser_state.push_literal(char),
+                _ => {
+                    parser_state.push_literal(BACK_SLASH);
+                    parser_state.push_literal(char);
+                }
             }
             parser_state.reset_escape();
             return;
         }
-        parser_state.push_litteral(char);
+        parser_state.push_literal(char);
         return;
     }
 
@@ -165,37 +150,31 @@ impl InputParser {
         if (char != SINGLE_QUOTE && char != DOUBLE_QUOTE && char != BACK_SLASH)
             || parser_state.escape_next
         {
-            parser_state.push_litteral(char);
+            parser_state.push_literal(char);
             parser_state.reset_escape();
         }
     }
 
-    pub fn parse_args(
-        &self,
-        quote_positions_filtered: &[QuotePosition],
-        args: &str,
-    ) -> Vec<String> {
+    pub fn parse_args(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
         let mut parser_state = ParserState::default();
 
         let c = args.chars();
         for (idx, char) in c.enumerate() {
-            if !quote_positions_filtered.is_empty() {
+            if !quote_positions.is_empty() {
                 // Use strict inequalities (> and <) to exclude quote boundaries                                                                                                          │
                 // This means opening/closing quotes are NOT "inside" the range                                                                                                           │
-                let maybe_quote_pos = quote_positions_filtered
+                let maybe_quote_pos = quote_positions
                     .iter()
                     .find(|pos| idx > *pos.start() && idx < *pos.end());
 
                 if let Some(quote_pos) = maybe_quote_pos {
-                    parser_state.set_quote_postion(&quote_pos);
+                    parser_state.set_quote_position(&quote_pos);
                     self.handle_quote(&mut parser_state, char);
                     continue;
                 }
             }
-
             self.handle_regular(&mut parser_state, args, idx, char);
         }
-
         parser_state.finalize_arg();
 
         parser_state.parsed_args
