@@ -18,7 +18,7 @@ pub(super) trait Completion {
 
     fn multiple_completion(&self, matches: &mut Vec<String>) -> Option<String> {
         matches.sort();
-        Some(matches.join("  "))
+        Some(matches.join(" "))
     }
 
     fn complete(&self, args: &str, multiple: bool) -> Option<String> {
