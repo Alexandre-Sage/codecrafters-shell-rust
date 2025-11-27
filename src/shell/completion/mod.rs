@@ -6,7 +6,7 @@ pub mod path_dirs;
 pub(super) trait Completion {
     fn completion_items(&self, args: &str) -> Vec<String>;
 
-    fn single_completion(&self, matches: Vec<String>, args: &str) -> Option<String> {
+    fn single_completion(&self, matches: &Vec<String>, args: &str) -> Option<String> {
         if matches.len() > 1 {
             return None;
         }
@@ -16,22 +16,23 @@ pub(super) trait Completion {
         Some(completion_item)
     }
 
-    fn multiple_completion(&self, matches: Vec<String>) -> Option<String> {
-        Some(matches.join(" "))
+    fn multiple_completion(&self, matches: &mut Vec<String>) -> Option<String> {
+        matches.sort();
+        Some(matches.join("  "))
     }
 
     fn complete(&self, args: &str, multiple: bool) -> Option<String> {
-        let matches = self.completion_items(args);
+        let mut matches = self.completion_items(args);
 
         if matches.is_empty() {
             return None;
         }
 
         if multiple {
-            return self.multiple_completion(matches);
+            return self.multiple_completion(&mut matches);
         }
 
-        return self.single_completion(matches, args);
+        return self.single_completion(&matches, args);
     }
 }
 
