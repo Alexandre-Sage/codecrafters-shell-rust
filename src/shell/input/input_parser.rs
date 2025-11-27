@@ -6,6 +6,39 @@ use crate::shell::input::commons::{BACK_SLASH, DOUBLE_QUOTE, SINGLE_QUOTE};
 use crate::shell::input::quote::{QuotePosition, QuoteType};
 use crate::shell::input::redirection_context::{RedirectionContext, RedirectionType};
 
+#[derive(Debug, Default)]
+struct ParserState {
+    escape_next: bool,
+    current_arg: Vec<char>,
+    parsed_args: Vec<String>,
+    quote_position: Option<QuotePosition>,
+}
+
+impl ParserState {
+    fn push_litteral(&mut self, char: char) {
+        self.current_arg.push(char);
+    }
+
+    fn escape_next(&mut self) {
+        self.escape_next = true
+    }
+
+    fn reset_escape(&mut self) {
+        self.escape_next = false
+    }
+
+    fn finalize_arg(&mut self) {
+        if !self.current_arg.is_empty() {
+            self.parsed_args.push(self.current_arg.iter().collect());
+            self.current_arg.clear();
+        }
+    }
+
+    fn set_quote_postion(&mut self, quote_position: QuotePosition) {
+        self.quote_position.replace(quote_position);
+    }
+}
+
 pub struct InputParser {
     file_manager: Arc<FileManager>,
 }
@@ -73,15 +106,30 @@ impl InputParser {
         Ok(quote_positions)
     }
 
+    fn should_escape_next(&self, state: &mut ParserState, char: char) {
+        if char != BACK_SLASH {
+            return;
+        }
+
+        if let Some(quote_position) = state.quote_position {
+            if quote_position.is_doulbe_quote() && !state.escape_next {
+                state.escape_next()
+            }
+        }
+
+        if !state.escape_next {
+            state.escape_next()
+        }
+    }
+
     pub fn parse_args(&self, quote_positions: &[QuotePosition], args: &str) -> Vec<String> {
         let quote_positions_filtered: Vec<_> = quote_positions
             .iter()
             .filter(|position| position.start() + 1 != *position.end())
             .collect();
 
-        let mut parsed_args: Vec<String> = vec![];
-        let mut current_arg: Vec<char> = vec![];
-        let mut escape_next = false;
+        let mut parser_state = ParserState::default();
+
         let c = args.chars();
         for (idx, char) in c.enumerate() {
             if !quote_positions_filtered.is_empty() {
@@ -92,50 +140,49 @@ impl InputParser {
                     .find(|pos| idx > *pos.start() && idx < *pos.end());
 
                 if let Some(quote_pos) = maybe_quote_pos {
-                    if char == BACK_SLASH && quote_pos.is_doulbe_quote() && !escape_next {
-                        escape_next = true;
+                    if char == BACK_SLASH
+                        && quote_pos.is_doulbe_quote()
+                        && !parser_state.escape_next
+                    {
+                        parser_state.escape_next();
                         continue;
                     }
 
-                    if escape_next {
+                    if parser_state.escape_next {
                         if char == DOUBLE_QUOTE || char == BACK_SLASH {
-                            // current_arg.push(BACK_SLASH);
-                            current_arg.push(char);
+                            parser_state.push_litteral(char);
                         } else {
-                            current_arg.push(BACK_SLASH);
-                            current_arg.push(char);
+                            parser_state.push_litteral(BACK_SLASH);
+                            parser_state.push_litteral(char);
                         }
-                        escape_next = false;
+                        parser_state.reset_escape();
                         continue;
                     }
-                    current_arg.push(char);
+                    parser_state.push_litteral(char);
                     continue;
                 }
             }
 
-            if char == BACK_SLASH && !escape_next && idx != args.len() - 1 {
-                escape_next = true;
+            if char == BACK_SLASH && !parser_state.escape_next && idx != args.len() - 1 {
+                parser_state.escape_next();
                 continue;
             }
 
-            if char == ' ' && !escape_next {
-                if !current_arg.is_empty() {
-                    parsed_args.push(current_arg.iter().collect());
-                    current_arg.clear();
-                }
+            if char == ' ' && !parser_state.escape_next {
+                parser_state.finalize_arg();
                 continue;
             }
 
-            if (char != SINGLE_QUOTE && char != DOUBLE_QUOTE && char != BACK_SLASH) || escape_next {
-                current_arg.push(char);
+            if (char != SINGLE_QUOTE && char != DOUBLE_QUOTE && char != BACK_SLASH)
+                || parser_state.escape_next
+            {
+                parser_state.push_litteral(char);
             }
 
-            if idx == args.len() - 1 && !current_arg.is_empty() {
-                parsed_args.push(current_arg.iter().collect());
-            }
-            escape_next = false
+            parser_state.reset_escape();
         }
-        parsed_args
+        parser_state.finalize_arg();
+        parser_state.parsed_args
     }
 
     fn parse_redirection(
@@ -302,7 +349,10 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err();
-        assert_eq!(err_msg, ShellError::MissingClosingQuote);
+        assert_eq!(
+            err_msg.to_string(),
+            ShellError::MissingClosingQuote.to_string()
+        );
     }
 
     #[test]
