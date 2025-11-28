@@ -4,8 +4,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
+use crate::shell::completion;
 use crate::shell::completion::builtins::BuiltinsCompletion;
-use crate::shell::input::input_handler::InputHandler;
+use crate::shell::input::input_handler::{InputHandler, InputResult};
 use crate::shell::raw_mode::RawMode;
 use crate::{
     commands::{
@@ -53,25 +54,45 @@ impl Repl {
         Self {
             builtins: registry,
             input_parser: InputParser::new(Arc::clone(&file_manager)),
-            output_handler,
             input_handler: InputHandler::new(completions), // file_manager,
+            output_handler,
         }
     }
 
-    fn prompt(&self) -> Result<(), io::Error> {
-        print!("$ ");
+    fn prompt(&self, content: Option<String>) -> Result<(), ShellError> {
+        let prompt = match content {
+            Some(content) => &format!("$ {content}"),
+            None => "$ ",
+        };
+        print!("{prompt}");
 
-        io::stdout().flush()
+        io::stdout()
+            .flush()
+            .map_err(|err| ShellError::Uncontroled(err.to_string()))
     }
 
     pub fn spawn(&self) -> Result<(), ShellError> {
+        let mut previous_content: Option<String> = None;
         loop {
-            self.prompt()
-                .map_err(|err| ShellError::Uncontroled(err.to_string()))?;
-            let buffer = self.input_handler.handle()?;
+            self.prompt(previous_content.clone())?;
 
-            match buffer {
-                Some(buffer) => {
+            let input = self.input_handler.handle(previous_content.clone())?;
+
+            if previous_content.is_some() {
+                previous_content = None
+            }
+
+            match input {
+                InputResult::Reset => self.output_handler.write_stdout("^C\r\n"),
+                InputResult::MultiCompletion {
+                    completion_items,
+                    input,
+                } => {
+                    self.output_handler.write_stdout(&completion_items);
+                    previous_content = Some(input);
+                    // self.prompt(Some(&input))?;
+                }
+                InputResult::Input(buffer) => {
                     let (parsed_command, redirection) = self.input_parser.parse(buffer.trim())?;
                     let command = self.builtins.execute(parsed_command);
                     match command {
@@ -81,7 +102,6 @@ impl Repl {
                         Ok(res) => self.output_handler.handle(res, redirection),
                     }?;
                 }
-                None => print!("\n"),
             }
 
             io::stderr()

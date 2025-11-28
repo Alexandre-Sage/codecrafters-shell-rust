@@ -18,6 +18,15 @@ use crate::{
 //     stdout: StdoutLock<'a>,
 //     tab_pressed_once: bool,
 // }
+pub enum InputResult {
+    Input(String),
+    // Completion(String),
+    MultiCompletion {
+        completion_items: String,
+        input: String,
+    },
+    Reset,
+}
 
 pub(crate) struct InputHandler {
     completion: BuiltinsCompletion,
@@ -28,10 +37,10 @@ impl InputHandler {
         Self { completion }
     }
 
-    pub(crate) fn handle(&self) -> Result<Option<String>, ShellError> {
+    pub(crate) fn handle(&self, previous_input: Option<String>) -> Result<InputResult, ShellError> {
         let _raw_mode = RawMode::enable()?;
 
-        let mut buffer = String::new();
+        let mut buffer = previous_input.unwrap_or_default();
         let mut tmp_buffer = [0u8; 1];
         let mut stdin = io::stdin().lock();
         let mut stdout = io::stdout().lock();
@@ -49,11 +58,10 @@ impl InputHandler {
                     match completion {
                         Some(completion_item) => {
                             if is_tab_pressed {
-                                self.write_output(
-                                    &mut stdout,
-                                    format!("{CRLF}{completion_item}").as_bytes(),
-                                )?;
-                                return Ok(None);
+                                return Ok(InputResult::MultiCompletion {
+                                    completion_items: format!("{CRLF}{completion_item}\n"),
+                                    input: buffer,
+                                });
                             }
 
                             let completion_item = format!("{completion_item} ");
@@ -78,8 +86,7 @@ impl InputHandler {
                     is_tab_pressed = false;
                 }
                 CTRL_C => {
-                    self.write_output(&mut stdout, b"^C\r\n")?;
-                    return Ok(None);
+                    return Ok(InputResult::Reset);
                 }
                 c if c >= ASCII_SPACE && c < ASCII_DEL => {
                     buffer.push(c as char);
@@ -92,7 +99,7 @@ impl InputHandler {
             }
         }
 
-        Ok(Some(buffer))
+        Ok(InputResult::Input(buffer))
     }
 
     fn write_output(&self, writer: &mut impl Write, buffer: &[u8]) -> Result<(), ShellError> {

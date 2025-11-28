@@ -38,7 +38,7 @@ impl OutputHandler {
         }
     }
 
-    fn write_stdout(&self, stdout: &str) {
+    pub fn write_stdout(&self, stdout: &str) {
         if !stdout.is_empty() {
             print!("{stdout}")
         }
