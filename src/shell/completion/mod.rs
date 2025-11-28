@@ -7,10 +7,6 @@ pub(super) trait Completion {
     fn completion_items(&self, args: &str) -> Vec<String>;
 
     fn single_completion(&self, matches: Vec<String>, args: &str) -> Option<String> {
-        // if matches.len() > 1 {
-        //     return None;
-        // }
-
         let completion_item = matches[0][args.len()..].to_string();
 
         Some(completion_item)

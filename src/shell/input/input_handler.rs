@@ -64,7 +64,7 @@ impl InputHandler {
                                 });
                             }
 
-                            let completion_item = format!("{completion_item} ");
+                            let completion_item = format!("{completion_item}");
                             buffer.push_str(&completion_item);
                             self.write_output(&mut stdout, completion_item.as_bytes())?;
                         }
