@@ -64,11 +64,12 @@ impl InputHandler {
                                 });
                             }
 
+                            is_tab_pressed = true;
                             buffer.push_str(&completion_item);
                             self.write_output(&mut stdout, completion_item.as_bytes())?;
-                            is_tab_pressed = true;
                         }
                         None => {
+                            is_tab_pressed = true;
                             self.write_output(&mut stdout, BELL_CHAR.as_bytes())?;
                         }
                     }
