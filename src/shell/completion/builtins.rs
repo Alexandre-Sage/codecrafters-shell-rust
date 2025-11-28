@@ -56,10 +56,10 @@ mod tests {
     fn complete_partial_command_with_single_match() {
         let completion = setup();
 
-        assert_eq!(completion.complete("ec", false), Some("ho".to_string()));
-        assert_eq!(completion.complete("typ", false), Some("e".to_string()));
-        assert_eq!(completion.complete("pw", false), Some("d".to_string()));
-        assert_eq!(completion.complete("exi", false), Some("t".to_string()));
+        assert_eq!(completion.complete("ec", false), Some("ho ".to_string()));
+        assert_eq!(completion.complete("typ", false), Some("e ".to_string()));
+        assert_eq!(completion.complete("pw", false), Some("d ".to_string()));
+        assert_eq!(completion.complete("exi", false), Some("t ".to_string()));
     }
 
     #[test]
@@ -74,9 +74,9 @@ mod tests {
     fn complete_full_command_returns_empty_string() {
         let completion = setup();
 
-        assert_eq!(completion.complete("echo", false), Some("".to_string()));
-        assert_eq!(completion.complete("exit", false), Some("".to_string()));
-        assert_eq!(completion.complete("pwd", false), Some("".to_string()));
+        assert_eq!(completion.complete("echo", false), Some(" ".to_string()));
+        assert_eq!(completion.complete("exit", false), Some(" ".to_string()));
+        assert_eq!(completion.complete("pwd", false), Some(" ".to_string()));
     }
 
     #[test]
