@@ -9,7 +9,9 @@ pub(super) trait Completion {
     fn single_completion(&self, matches: Vec<String>, args: &str) -> Option<String> {
         let completion_item = matches[0][args.len()..].to_string();
 
-        let is_partial_comp = matches.iter().find(|m| m.starts_with(&completion_item));
+        let is_partial_comp = matches
+            .iter()
+            .find(|m| m.as_str() != &completion_item && m.starts_with(&completion_item));
 
         if is_partial_comp.is_some() {
             return Some(completion_item);
